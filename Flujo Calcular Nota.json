@@ -1,0 +1,402 @@
+{
+  "name": "Flujo Calcular Nota",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1168897056,
+          "mode": "list",
+          "cachedResultName": "Respuestas de formulario 7",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=1168897056"
+        },
+        "event": "rowUpdate",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        -480,
+        160
+      ],
+      "id": "116421c3-595a-4a83-a364-74b3c3b4daa8",
+      "name": "Google Sheets Trigger",
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "ARrlQj0rFbVaoF9B",
+          "name": "Google Sheets Trigger account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 283919094,
+          "mode": "list",
+          "cachedResultName": "Respuestas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=283919094"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Nombre Completo": "={{ $json.nombreCompleto }}",
+            "Correo": "={{ $json.correo }}",
+            "Pregunta": "={{ $json.pregunta }}",
+            "Respuesta": "={{ $json.respuesta }}"
+          },
+          "matchingColumns": [
+            "Pregunta"
+          ],
+          "schema": [
+            {
+              "id": "Nombre Completo",
+              "displayName": "Nombre Completo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Correo",
+              "displayName": "Correo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Pregunta",
+              "displayName": "Pregunta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Respuesta",
+              "displayName": "Respuesta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        0,
+        0
+      ],
+      "id": "a294b852-0ca5-44f3-b88d-e1a9f255f525",
+      "name": "GuardarRespuesta",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "zUSlXfuga1J9iASp",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst output = [];\n\n// Claves estáticas EXACTAS según llegan desde Google Forms / Sheets\nconst staticKeys = [\n    \"Marca temporal\",\n    \"Dirección de correo electrónico\",\n    \"Nombre completo\",      // por si viene así\n    \"Nombre Completo\"       // ESTA es la clave que te está faltando\n];\n\nfor (const item of items) {\n    const data = item.json;\n\n    // Detectar correctamente el nombre y correo\n    const nombreCompleto = data[\"Nombre Completo\"] || data[\"Nombre completo\"] || \"\";\n    const correo = data[\"Dirección de correo electrónico\"] || \"\";\n\n    for (const key in data) {\n        if (!staticKeys.includes(key)) {\n            // Valor de la respuesta\n            const respuesta = data[key] || \"\";\n\n            output.push({\n                json: {\n                    nombreCompleto,\n                    correo,\n                    pregunta: key,\n                    respuesta\n                }\n            });\n        }\n    }\n}\n\nreturn output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -272,
+        160
+      ],
+      "id": "ee4985bd-78e3-448a-bf73-654d6db942e6",
+      "name": "Separador de respuesta"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 692677085,
+          "mode": "list",
+          "cachedResultName": "Banco_Preguntas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=692677085"
+        },
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "rangeDefinition": "detectAutomatically"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        208,
+        0
+      ],
+      "id": "30ccd4be-87d9-44e7-a539-b2bfac06699c",
+      "name": "Banco preguntas",
+      "executeOnce": true,
+      "alwaysOutputData": false,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "zUSlXfuga1J9iASp",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const respuestas = $input.all().map(item => item.json);\nconst banco = $items('Banco preguntas').map(item => item.json);\n\n// Índice de preguntas del banco\nconst indexBanco = new Map();\nfor (const q of banco) {\n  const key = String(q.pregunta || \"\").trim();\n  indexBanco.set(key, q);\n}\n\nconst salida = [];\n\nfor (const r of respuestas) {\n  const correo = r.correo;\n\n  // 👇 SI NO HAY CORREO, LO SALTAMOS (son filas basura / banco / cabecera)\n  if (!correo) {\n    continue;\n  }\n\n  const pregunta = String(r.pregunta || \"\").trim();\n\n  // Usa respuesta_usuario si existe, si no, usa respuesta\n  const respuestaUsuario = String(\n    r.respuesta_usuario ?? r.respuesta ?? \"\"\n  ).trim();\n\n  const registroBanco = indexBanco.get(pregunta);\n\n  let respuestaCorrectaTexto = \"No encontrada\";\n  let estado = \"Incorrecta\";\n  let explicacion = \"\";\n\n  if (registroBanco) {\n    const letra = String(registroBanco.respuesta_correcta || \"\")\n      .trim()\n      .toUpperCase();\n    const campo = \"alt_\" + letra;\n\n    const valorAlt = registroBanco[campo];\n    const valorAltStr =\n      valorAlt === undefined || valorAlt === null ? \"\" : String(valorAlt);\n\n    respuestaCorrectaTexto = valorAltStr.trim() || \"No encontrada\";\n\n    explicacion = registroBanco.explicacion\n      ? String(registroBanco.explicacion)\n      : \"\";\n\n    if (\n      respuestaUsuario !== \"\" &&\n      respuestaCorrectaTexto !== \"No encontrada\" &&\n      respuestaUsuario === respuestaCorrectaTexto\n    ) {\n      estado = \"Correcta\";\n    }\n  }\n\n  salida.push({\n    json: {\n      correo,\n      pregunta,\n      respuesta_usuario: respuestaUsuario,\n      respuesta_correcta: respuestaCorrectaTexto,\n      estado,\n      explicacion,\n    },\n  });\n}\n\nreturn salida;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        544,
+        160
+      ],
+      "id": "e0c67b42-da82-41e9-99a3-bd8f2da3b4e5",
+      "name": "comparador",
+      "alwaysOutputData": false,
+      "retryOnFail": false,
+      "notesInFlow": false,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const desglose = $input.all().map(item => item.json);\n\nconst porCorreo = {};\n\nfor (const fila of desglose) {\n  const correo = fila.correo;\n  if (!porCorreo[correo]) {\n    porCorreo[correo] = {\n      correo,\n      total_preguntas: 0,\n      respuestas_correctas: 0,\n    };\n  }\n\n  porCorreo[correo].total_preguntas += 1;\n  if (fila.estado === \"Correcta\") {\n    porCorreo[correo].respuestas_correctas += 1;\n  }\n}\n\nconst salida = [];\n\nfor (const correo in porCorreo) {\n  const data = porCorreo[correo];\n  const porcentaje =\n    data.total_preguntas > 0\n      ? (data.respuestas_correctas / data.total_preguntas) * 100\n      : 0;\n\n  // Ajusta la regla de notas como quieras:\n  let nota_final = 1;\n  if (porcentaje >= 60) nota_final = 7;\n  else if (porcentaje >= 40) nota_final = 4;\n\n  salida.push({\n    json: {\n      correo: data.correo,\n      total_preguntas: data.total_preguntas,\n      respuesta_correctas: data.respuestas_correctas,\n      porcentaje_aciertos: `${porcentaje.toFixed(2)}%`,\n      nota_final,\n    },\n  });\n}\n\nreturn salida;\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        784,
+        160
+      ],
+      "id": "1d3a7ac0-073e-4130-b809-c3daa1508a02",
+      "name": "Calcular Nota"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 688664164,
+          "mode": "list",
+          "cachedResultName": "Resumen_Usuario",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=688664164"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "correo": "={{ $json.correo }}",
+            "total_preguntas": "={{ $json.total_preguntas }}",
+            "porcentaje_aciertos": "={{ $json.porcentaje_aciertos }}",
+            "nota_final": "={{ $json.nota_final }}",
+            "respuesta_correctas": "={{ $json.respuesta_correctas }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "correo",
+              "displayName": "correo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "total_preguntas",
+              "displayName": "total_preguntas",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "respuesta_correctas",
+              "displayName": "respuesta_correctas",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "porcentaje_aciertos",
+              "displayName": "porcentaje_aciertos",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "nota_final",
+              "displayName": "nota_final",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        976,
+        160
+      ],
+      "id": "f4e81298-604f-465a-be2a-1aced31dc151",
+      "name": "Update_Resumen (notas)",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "zUSlXfuga1J9iASp",
+          "name": "Google Sheets account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Sheets Trigger": {
+      "main": [
+        [
+          {
+            "node": "Separador de respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GuardarRespuesta": {
+      "main": [
+        [
+          {
+            "node": "Banco preguntas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Separador de respuesta": {
+      "main": [
+        [
+          {
+            "node": "GuardarRespuesta",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "comparador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Banco preguntas": {
+      "main": [
+        [
+          {
+            "node": "comparador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "comparador": {
+      "main": [
+        [
+          {
+            "node": "Calcular Nota",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular Nota": {
+      "main": [
+        [
+          {
+            "node": "Update_Resumen (notas)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "fc5b506c-6279-4eb8-a4fb-d01191f8e5d0",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "72c2ca3fe002840cf827f7fe313562a971a7be24988784af410caaf057abfd24"
+  },
+  "id": "I6FyU2SJR34L1QUc",
+  "tags": []
+}
