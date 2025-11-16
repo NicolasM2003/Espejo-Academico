@@ -1,0 +1,483 @@
+{
+  "name": "Trigger_Formulario",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "evaluaciones",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -160,
+        176
+      ],
+      "id": "698ed736-b0a2-4f6d-b820-506132fe5964",
+      "name": "Webhook",
+      "webhookId": "8541f6ba-98e4-40a9-9ff5-91ae55ad6a9e"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 692677085,
+          "mode": "list",
+          "cachedResultName": "Banco_Preguntas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=692677085"
+        },
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "rangeDefinition": "detectAutomatically"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        416,
+        48
+      ],
+      "id": "059c0781-c487-44e0-89bd-ee900fa4dbbd",
+      "name": "Banco preguntas",
+      "executeOnce": true,
+      "alwaysOutputData": false,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "5rQcToyE9LwX7DQF",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Respuestas que vienen del webhook normalizado\nconst respuestas = $input.all().map(item => item.json);\n\n// Banco de preguntas desde el otro input (nodo \"Banco preguntas\")\nconst banco = $items('Banco preguntas').map(item => item.json);\n\n// Helper para normalizar texto (opcional, para evitar problemas de espacios/mayúsculas)\nfunction norm(str) {\n  return String(str || '')\n    .trim()\n    .toLowerCase();\n}\n\n// Índice de preguntas del banco: clave = id_evaluacion + pregunta_normalizada\nconst indexBanco = new Map();\n\nfor (const q of banco) {\n  const idEval = String(q.id_evaluacion || '').trim();\n  const preguntaNorm = norm(q.pregunta);\n  const key = `${idEval}|||${preguntaNorm}`;\n  indexBanco.set(key, q);\n\n  // Fallback: si no tiene id_evaluacion en el banco, también indexamos sin ID\n  if (!idEval) {\n    const keySinEval = `|||${preguntaNorm}`;\n    if (!indexBanco.has(keySinEval)) {\n      indexBanco.set(keySinEval, q);\n    }\n  }\n}\n\nconst salida = [];\n\nfor (const r of respuestas) {\n  const correo = r.correo;\n  const id_evaluacion = r.id_evaluacion;\n  const id_intento = r.id_intento;\n  const nombre_completo = r.nombre_completo;\n\n  // 👇 Si no hay correo, lo saltamos (por seguridad, igual que antes)\n  if (!correo) {\n    continue;\n  }\n\n  const preguntaOriginal = String(r.pregunta || \"\").trim();\n  const preguntaNorm = norm(preguntaOriginal);\n\n  // Usa respuesta_usuario si existe, si no, respuesta (como antes)\n  const respuestaUsuario = String(\n    r.respuesta_usuario ?? r.respuesta ?? \"\"\n  ).trim();\n\n  // Buscamos en el índice usando id_evaluacion + pregunta\n  const keyConEval = `${String(id_evaluacion || '').trim()}|||${preguntaNorm}`;\n  let registroBanco = indexBanco.get(keyConEval);\n\n  // Si no encontramos con id_evaluacion, probamos sin id_evaluacion\n  if (!registroBanco) {\n    const keySinEval = `|||${preguntaNorm}`;\n    registroBanco = indexBanco.get(keySinEval);\n  }\n\n  let respuestaCorrectaTexto = \"No encontrada\";\n  let estado = \"Incorrecta\";\n  let explicacion = \"\";\n\n  if (registroBanco) {\n    // Tu lógica original: respuesta_correcta es una LETRA (A/B/C/D)\n    const letra = String(registroBanco.respuesta_correcta || \"\")\n      .trim()\n      .toUpperCase();\n    const campo = \"alt_\" + letra;\n\n    const valorAlt = registroBanco[campo];\n    const valorAltStr =\n      valorAlt === undefined || valorAlt === null ? \"\" : String(valorAlt);\n\n    respuestaCorrectaTexto = valorAltStr.trim() || \"No encontrada\";\n\n    explicacion = registroBanco.explicacion\n      ? String(registroBanco.explicacion)\n      : \"\";\n\n    if (\n      respuestaUsuario !== \"\" &&\n      respuestaCorrectaTexto !== \"No encontrada\" &&\n      respuestaUsuario === respuestaCorrectaTexto\n    ) {\n      estado = \"Correcta\";\n    }\n  }\n\n  salida.push({\n    json: {\n      // 🔹 Nuevos campos que propagamos\n      id_evaluacion,\n      id_intento,\n      nombre_completo,\n\n      // 🔹 Campos que ya tenías\n      correo,\n      pregunta: preguntaOriginal,\n      respuesta_usuario: respuestaUsuario,\n      respuesta_correcta: respuestaCorrectaTexto,\n      estado,\n      explicacion,\n    },\n  });\n}\n\nreturn salida;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        944,
+        176
+      ],
+      "id": "0c9af42c-3b4e-44fe-8ed6-a0124e178554",
+      "name": "comparador",
+      "alwaysOutputData": false,
+      "retryOnFail": false,
+      "notesInFlow": false,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const desglose = $input.all().map(item => item.json);\n\nconst porIntento = {};\n\nfor (const fila of desglose) {\n  const id_evaluacion = fila.id_evaluacion || '';\n  const id_intento = fila.id_intento || '';\n  const correo = fila.correo || '';\n  const nombre_completo = fila.nombre_completo || '';\n\n  // Clave de agrupación: intento + correo (por seguridad)\n  const key = `${id_evaluacion}||${id_intento}||${correo}`;\n\n  if (!porIntento[key]) {\n    porIntento[key] = {\n      id_evaluacion,\n      id_intento,\n      correo,\n      nombre_completo,\n      total_preguntas: 0,\n      respuestas_correctas: 0,\n    };\n  }\n\n  porIntento[key].total_preguntas += 1;\n  if (fila.estado === \"Correcta\") {\n    porIntento[key].respuestas_correctas += 1;\n  }\n}\n\nconst salida = [];\n\nfor (const key in porIntento) {\n  const data = porIntento[key];\n  const porcentaje =\n    data.total_preguntas > 0\n      ? (data.respuestas_correctas / data.total_preguntas) * 100\n      : 0;\n\n  // ✅ Mantengo tu regla de notas tal cual\n  let nota_final = 1;\n  if (porcentaje >= 60) nota_final = 7;\n  else if (porcentaje >= 40) nota_final = 4;\n\n  salida.push({\n    json: {\n      id_evaluacion: data.id_evaluacion,\n      id_intento: data.id_intento,\n      correo: data.correo,\n      nombre_completo: data.nombre_completo,\n      total_preguntas: data.total_preguntas,\n      respuesta_correctas: data.respuestas_correctas,\n      porcentaje_aciertos: `${porcentaje.toFixed(2)}%`,\n      nota_final,\n    },\n  });\n}\n\nreturn salida;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1184,
+        64
+      ],
+      "id": "b8d66da1-f0ee-43ff-8fe5-37537917fb6d",
+      "name": "Calcular Nota"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1953818244,
+          "mode": "list",
+          "cachedResultName": "Desgloce_preguntas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=1953818244"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "explicacion": "={{ $json.explicacion }}",
+            "correo": "={{ $json.correo }}",
+            "pregunta": "={{ $json.pregunta }}",
+            "respuesta_usuario": "={{ $json.respuesta_usuario }}",
+            "respuesta_correcta": "={{ $json.respuesta_correcta }}",
+            "estado": "={{ $json.estado }}",
+            "id_intento": "={{ $json.id_intento }}",
+            "id_detalle": "={{ $json.id_detalle }}",
+            "id_evaluacion": "={{ $json.id_evaluacion }}"
+          },
+          "matchingColumns": [
+            "explicacion"
+          ],
+          "schema": [
+            {
+              "id": "correo",
+              "displayName": "correo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "pregunta",
+              "displayName": "pregunta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "respuesta_usuario",
+              "displayName": "respuesta_usuario",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "respuesta_correcta",
+              "displayName": "respuesta_correcta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "explicacion",
+              "displayName": "explicacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "id_detalle",
+              "displayName": "id_detalle",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "id_intento",
+              "displayName": "id_intento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "id_evaluacion",
+              "displayName": "id_evaluacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1392,
+        336
+      ],
+      "id": "d6f1b5fd-6a7a-40fa-b223-c4fdf743a20a",
+      "name": "Update_Desgloce",
+      "retryOnFail": true,
+      "maxTries": 5,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "5rQcToyE9LwX7DQF",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 688664164,
+          "mode": "list",
+          "cachedResultName": "Resumen_Usuario",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=688664164"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "correo": "={{ $json.correo }}",
+            "total_preguntas": "={{ $json.total_preguntas }}",
+            "porcentaje_aciertos": "={{ $json.porcentaje_aciertos }}",
+            "nota_final": "={{ $json.nota_final }}",
+            "respuesta_correctas": "={{ $json.respuesta_correctas }}",
+            "id_intento": "={{ $json.id_intento }}",
+            "id_evaluacion": "={{ $json.id_evaluacion }}"
+          },
+          "matchingColumns": [
+            "id_intento"
+          ],
+          "schema": [
+            {
+              "id": "correo",
+              "displayName": "correo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "total_preguntas",
+              "displayName": "total_preguntas",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "respuesta_correctas",
+              "displayName": "respuesta_correctas",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "porcentaje_aciertos",
+              "displayName": "porcentaje_aciertos",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "nota_final",
+              "displayName": "nota_final",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "id_intento",
+              "displayName": "id_intento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "id_evaluacion",
+              "displayName": "id_evaluacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1376,
+        64
+      ],
+      "id": "8c730cdb-ace5-4f9e-8a1c-bb7f4e0ff290",
+      "name": "Update_Resumen notas",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "5rQcToyE9LwX7DQF",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Entrada: 1 item desde el Webhook\nconst root    = items[0].json;\n// Si viene anidado en body (Webhook), lo tomamos de ahí\nconst entrada = root.body || root;\n\nconst id_evaluacion  = entrada.id_evaluacion;\nconst id_intento     = entrada.id_intento;\nconst email          = entrada.email;\nconst nombreCompleto = entrada.nombre_completo;\nconst respuestas     = entrada.respuestas || {};\n\n// Campos que NO queremos tratar como preguntas\nconst camposIgnorar = new Set([\n  'Nombre Completo',\n  'Marca temporal',\n  'Dirección de correo electrónico',\n  'Puntuación', // por si algún día aparece\n]);\n\nconst salida = [];\n\n// Recorremos todas las claves del objeto \"respuestas\"\nfor (const tituloPregunta of Object.keys(respuestas)) {\n  if (camposIgnorar.has(tituloPregunta)) continue;\n\n  // Cada entrada es un array, nos quedamos con la primera respuesta\n  const respuestaArray = respuestas[tituloPregunta] || [];\n  const respuestaUsuario = respuestaArray.length > 0\n    ? String(respuestaArray[0]).trim()\n    : '';\n\n  salida.push({\n    json: {\n      id_evaluacion,\n      id_intento,\n      correo: email,\n      nombre_completo: nombreCompleto,\n      pregunta: tituloPregunta,\n      respuesta_usuario: respuestaUsuario,\n      // estos los completa luego el comparador:\n      // respuesta_correcta,\n      // estado,\n      // explicacion,\n    },\n  });\n}\n\nreturn salida;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        64,
+        176
+      ],
+      "id": "fd29efb6-2994-463e-ba45-5c1912d9b5d4",
+      "name": "Normalizador_respuestas"
+    },
+    {
+      "parameters": {
+        "jsCode": "const respuestas = $input.all().map(i => i.json);\nconst salida = [];\n\nfor (let idx = 0; idx < respuestas.length; idx++) {\n  const r = respuestas[idx];\n\n  const id_evaluacion = r.id_evaluacion;\n  const id_intento = r.id_intento;\n  const correo = r.correo;\n\n  // ID único por detalle (pregunta dentro del intento)\n  const id_detalle = `${id_intento}_${idx + 1}`;\n\n  salida.push({\n    json: {\n      id_evaluacion,\n      id_intento,\n      id_detalle,\n      correo,\n      pregunta: r.pregunta,\n      respuesta_usuario: r.respuesta_usuario,\n      respuesta_correcta: r.respuesta_correcta,\n      estado: r.estado,\n      explicacion: r.explicacion,\n    },\n  });\n}\n\nreturn salida;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        336
+      ],
+      "id": "4e6bff73-a690-49a8-bceb-06f4632590d4",
+      "name": "Desgloce"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Banco preguntas": {
+      "main": [
+        [
+          {
+            "node": "comparador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "comparador": {
+      "main": [
+        [
+          {
+            "node": "Calcular Nota",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Desgloce",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular Nota": {
+      "main": [
+        [
+          {
+            "node": "Update_Resumen notas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalizador_respuestas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizador_respuestas": {
+      "main": [
+        [
+          {
+            "node": "comparador",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Banco preguntas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Desgloce": {
+      "main": [
+        [
+          {
+            "node": "Update_Desgloce",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update_Desgloce": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "a3db2f00-cea7-4791-9729-ae74a2b4512e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "022bd62317084c7981f5dfb727faab62055db708640ac88731bccfc24e279659"
+  },
+  "id": "iOVUzQQrQ5OagMNS",
+  "tags": []
+}
