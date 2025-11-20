@@ -40,7 +40,7 @@ https://www.docker.com
 Ejecutar en terminal:
 
 ```
-docker run -it --rm -p 5678:5678 -v C:\Users\123jo\n8n_data:/home/node/.n8n n8nio/n8n
+docker run -it --rm -p 5678:5678 -v $env:USERPROFILE\n8n_data:/home/node/.n8n n8nio/n8n
 ```
 
 Acceder en navegador:  
