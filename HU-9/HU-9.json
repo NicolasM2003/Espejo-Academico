@@ -1,0 +1,117 @@
+{
+  "name": "HU-9 Resumen correo",
+  "nodes": [
+    {
+      "parameters": {
+        "sendTo": "nicolaj354@gmail.com",
+        "subject": "Resultados de tu evaluación",
+        "message": "={{$json[\"body\"]}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        624,
+        0
+      ],
+      "id": "3803578b-bf77-447c-8894-1ece23d595ed",
+      "name": "Send a message",
+      "webhookId": "8953136f-a6c2-4ad0-894d-fdd63274b162",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "bULEFC6wEDTxdugm",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 688664164,
+          "mode": "list",
+          "cachedResultName": "Resumen_Preguntas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=688664164"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "43d87b34-4247-4e40-8b1c-e2165eacb5bc",
+      "name": "Google Sheets Trigger",
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "8S5KXAB1BxuIau2K",
+          "name": "Google Sheets Trigger account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $json;\n\n// reconstruir valores reales desde sheets\nconst correctasCount = Number(d.respuesta_correctas);\nconst incorrectasCount = Number(d.total_preguntas) - correctasCount;\n\n// crear arrays ficticios SOLO para mostrar cantidad\nconst correctas = Array(correctasCount).fill({});\nconst incorrectas = Array(incorrectasCount).fill({});\n\nlet body = `\nHola,<br><br>\n\nHemos revisado tu evaluación.<br><br>\n\n<b>Nota final:</b> ${d.nota_final}<br>\n<b>Porcentaje de acierto:</b> ${d.porcentaje_aciertos * 100}%<br>\n<b>Preguntas correctas:</b> ${correctas.length}<br>\n<b>Preguntas incorrectas:</b> ${incorrectas.length}<br><br>\n\nEste correo corresponde a tu resumen general.<br>\nPara ver explicaciones detalladas, revisa los otros módulos del sistema.\n`;\n\nreturn [\n  {\n    json: {\n      body,\n      correo: d.correo\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        288,
+        -16
+      ],
+      "id": "983327c0-74fd-4fa8-a19b-7c7b049f87ed",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Sheets Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "8b052f7b-ebad-4616-88b5-88f1548e3218",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "022bd62317084c7981f5dfb727faab62055db708640ac88731bccfc24e279659"
+  },
+  "id": "vd83ZLq39aUEovdH",
+  "tags": []
+}

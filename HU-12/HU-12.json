@@ -1,0 +1,317 @@
+{
+  "name": "Registrar Resultado unico en Google Sheets(HU_12)",
+  "nodes": [
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 531598096,
+          "mode": "list",
+          "cachedResultName": "Respuestas de formulario 50",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=531598096"
+        },
+        "options": {}
+      },
+      "id": "ea130ab9-8f51-41eb-82b9-b54d87a0255a",
+      "name": "Buscar Correo en Hoja",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 3,
+      "position": [
+        -464,
+        112
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "zUSlXfuga1J9iASp",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1388339891,
+          "mode": "list",
+          "cachedResultName": "ID_Estudiantes",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=1388339891"
+        },
+        "columnToMatchOn": "ID",
+        "valueToMatchOn": "={{ $json.row_number }}",
+        "fieldsUi": {
+          "values": [
+            {
+              "column": "Correo",
+              "fieldValue": "={{ $('Normalizar').item.json.correo }}"
+            },
+            {
+              "column": "Nombre",
+              "fieldValue": "={{ $('Normalizar').item.json.nombre_completo }}"
+            },
+            {
+              "column": "newColumn",
+              "columnName": "Pregunta",
+              "fieldValue": "={{ $('Normalizar').item.json.pregunta }}"
+            },
+            {
+              "column": "newColumn",
+              "columnName": "Respuesta",
+              "fieldValue": "={{ $('Normalizar').item.json.respuesta_usuario }}"
+            },
+            {
+              "column": "newColumn",
+              "columnName": "Nota Final",
+              "fieldValue": "={{ $('Resumen_preguntas').item.json.nota_final }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2d3cc99f-5a60-455c-b42d-4df8996d7936",
+      "name": "Agregar Resultado",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 3,
+      "position": [
+        400,
+        256
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "zUSlXfuga1J9iASp",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "Entrada",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -880,
+        112
+      ],
+      "id": "34b12b82-f713-4ccd-8e18-b397fe31ae1b",
+      "name": "Webhook",
+      "webhookId": "920d30fb-4450-4951-a671-5a06d875766c"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Entrada: 1 item desde el Webhook\nconst root = items[0].json;\n\n// Si viene anidado en body (Webhook), lo tomamos de ahí\nconst entrada = root.body || root;\n\nconst id_evaluacion  = entrada.id_evaluacion;\nconst id_intento     = entrada.id_intento;\nconst email          = entrada.email;\nconst nombreCompleto = entrada.nombre_completo;\nconst respuestas     = entrada.respuestas || {};\n\n// Campos que NO queremos tratar como preguntas\nconst camposIgnorar = new Set([\n  'Nombre Completo',\n  'Marca temporal',\n  'Dirección de correo electrónico',\n  'Puntuación',\n]);\n\nconst salida = [];\n\n// Recorremos todas las claves del objeto \"respuestas\"\nfor (const tituloPregunta of Object.keys(respuestas)) {\n  if (camposIgnorar.has(tituloPregunta)) continue;\n\n  // Cada entrada es un array, nos quedamos con la primera respuesta\n  const respuestaArray = respuestas[tituloPregunta] || [];\n  const respuestaUsuario = respuestaArray.length > 0\n    ? String(respuestaArray[0]).trim()\n    : '';\n\n  salida.push({\n    json: {\n      id_evaluacion,\n      id_intento,\n      correo: email,\n      nombre_completo: nombreCompleto,\n      pregunta: tituloPregunta,\n      respuesta_usuario: respuestaUsuario,\n    },\n  });\n}\n\nreturn salida;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -672,
+        112
+      ],
+      "id": "4d01f274-97dd-457d-ad53-fcb3b1e41480",
+      "name": "Normalizar"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 688664164,
+          "mode": "list",
+          "cachedResultName": "Resumen_Preguntas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=688664164"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -240,
+        112
+      ],
+      "id": "4b06db7d-685a-4e85-91f5-38e5f3ee73f8",
+      "name": "Resumen_preguntas",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "zUSlXfuga1J9iASp",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "026166ed-1afb-4aee-9cec-ed235733eeed",
+              "leftValue": "={{ $json.Correo }}",
+              "rightValue": "={{ $('Resumen_preguntas').item.json.correo }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        112,
+        112
+      ],
+      "id": "b287221e-5804-4237-9bfe-6618232a65f4",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1388339891,
+          "mode": "list",
+          "cachedResultName": "ID_Estudiantes",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=1388339891"
+        },
+        "combineFilters": "OR",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -64,
+        112
+      ],
+      "id": "60f3e321-e1ba-4ccf-9988-15d8877aa3be",
+      "name": "ID_Estudiantes",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "zUSlXfuga1J9iASp",
+          "name": "Google Sheets account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Buscar Correo en Hoja": {
+      "main": [
+        [
+          {
+            "node": "Resumen_preguntas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalizar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar": {
+      "main": [
+        [
+          {
+            "node": "Buscar Correo en Hoja",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agregar Resultado": {
+      "main": [
+        []
+      ]
+    },
+    "Resumen_preguntas": {
+      "main": [
+        [
+          {
+            "node": "ID_Estudiantes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Agregar Resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ID_Estudiantes": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "05c3b002-c6d1-43ac-9fd0-154ed4e00f70",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "72c2ca3fe002840cf827f7fe313562a971a7be24988784af410caaf057abfd24"
+  },
+  "id": "FnKa87C8H0qsCFy9",
+  "tags": []
+}

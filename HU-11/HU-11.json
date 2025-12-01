@@ -1,0 +1,427 @@
+{
+  "name": "HU-11 Funcional_v1",
+  "nodes": [
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 688664164,
+          "mode": "list",
+          "cachedResultName": "Resumen_Preguntas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=688664164"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "correo",
+              "lookupValue": "={{ $json.correo }}"
+            },
+            {
+              "lookupColumn": "id_intento",
+              "lookupValue": "={{ $json.id_intento }}"
+            },
+            {
+              "lookupColumn": "id_evaluacion",
+              "lookupValue": "={{ $json.id_evaluacion }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -176,
+        400
+      ],
+      "id": "a7590b3e-e7f0-4b0e-994a-b1ae8d9a9474",
+      "name": "resumen_notas1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "RycGUSJQ3Yq4bQn4",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1953818244,
+          "mode": "list",
+          "cachedResultName": "Desgloce_preguntas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=1953818244"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "correo",
+              "lookupValue": "={{ $json.correo }}"
+            },
+            {
+              "lookupColumn": "id_intento",
+              "lookupValue": "={{ $json.id_intento }}"
+            },
+            {
+              "lookupColumn": "id_evaluacion",
+              "lookupValue": "={{ $json.id_evaluacion }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -448,
+        160
+      ],
+      "id": "605ce342-9fe2-42a7-9753-126c363e7d00",
+      "name": "Desgloce1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "w9v4RdMrOL2Hokks",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "=123joaquinromero@gmail.com",
+        "subject": "={{ $('mensaje1').first().json.emailSubject }}",
+        "message": "={{ $('mensaje1').first().json.emailBody }}",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {}
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1376,
+        384
+      ],
+      "id": "5f2fc85e-a0dd-4465-ab2b-8558a16c0bed",
+      "name": "Send a message2",
+      "webhookId": "8f1700dd-0943-4d79-8ea8-048106a9cce2",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "yQMLdUtcfNogKVQp",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Obtenemos todos los datos\nlet items = $input.all();\n\n// --- FILTRO ANTI-DUPLICADOS ---\nconst preguntasVistas = new Set();\nitems = items.filter(item => {\n  const pregunta = item.json.pregunta;\n  if (preguntasVistas.has(pregunta)) {\n    return false;\n  }\n  preguntasVistas.add(pregunta);\n  return true;\n});\n\n// 2. Datos del resumen\nconst resumen = items[0] ? items[0].json : {};\n\n// 3. Cálculos\nconst total = items.length; \nconst correctas = items.filter(item => item.json.respuesta_usuario === item.json.respuesta_correcta).length;\nconst porcentaje = total > 0 ? ((correctas / total) * 100).toFixed(0) : 0;\n\n// 4. Construcción del PDF\nlet htmlPdf = `\n<html>\n<head>\n<style>\n  body { font-family: Helvetica, Arial, sans-serif; padding: 40px; font-size: 12px; color: #333; }\n  h1 { font-size: 18px; margin-bottom: 10px; }\n  h2 { font-size: 14px; margin-top: 20px; margin-bottom: 10px; border-bottom: 2px solid #eee; padding-bottom: 5px; }\n  .header-info { margin-bottom: 20px; }\n  .stats-box { border: 1px solid #ccc; padding: 15px; background: #f9f9f9; margin-bottom: 30px; border-radius: 4px; }\n  .pregunta-container { margin-bottom: 20px; page-break-inside: avoid; }\n  .pregunta-titulo { font-weight: bold; display: block; margin-bottom: 5px; font-size: 13px; }\n  .respuesta-usuario { margin-bottom: 5px; }\n  \n  /* Estilos para Feedback */\n  .status-correcta { color: #28a745; font-weight: bold; margin-top: 5px; }\n  .status-incorrecta { color: #d9534f; font-weight: bold; margin-top: 5px; }\n  \n  .explicacion-box { \n      background-color: #fff3cd; \n      padding: 10px; \n      margin-top: 8px; \n      border-left: 4px solid #f0ad4e; \n      font-style: italic; \n      font-size: 11px;\n  }\n</style>\n</head>\n<body>\n\n  <h1>Reporte de Evaluación</h1>\n  <div class=\"header-info\">\n    <strong>Estudiante:</strong> ${resumen.correo || 'Estudiante'}\n  </div>\n  \n  <div class=\"stats-box\">\n    <h3>Resumen de Resultados</h3>\n    <p><strong>Nota Final:</strong> ${resumen.nota_final || '-'}</p>\n    <p><strong>Acierto:</strong> ${porcentaje}% (${correctas}/${total})</p>\n  </div>\n\n  <h2>Detalle de respuestas:</h2>\n`;\n\nfor (const item of items) {\n  const data = item.json;\n  const esCorrecta = data.respuesta_usuario === data.respuesta_correcta;\n  \n  htmlPdf += `<div class=\"pregunta-container\">`;\n  htmlPdf += `<span class=\"pregunta-titulo\">${data.pregunta}</span>`;\n  htmlPdf += `<div class=\"respuesta-usuario\">Tu respuesta: ${data.respuesta_usuario}</div>`;\n  \n  // Lógica de visualización SIEMPRE visible\n  if (esCorrecta) {\n      htmlPdf += `<div class=\"status-correcta\">¡Correcto!</div>`;\n  } else {\n      htmlPdf += `<div class=\"status-incorrecta\">Correcta: ${data.respuesta_correcta}</div>`;\n  }\n\n  // Mostrar explicación SIEMPRE (si existe en los datos)\n  if (data.explicacion) {\n      htmlPdf += `<div class=\"explicacion-box\"><strong>Explicación:</strong> ${data.explicacion}</div>`;\n  }\n\n  htmlPdf += `</div><hr style=\"border:0; border-top:1px solid #eee;\">`;\n}\n\nhtmlPdf += `</body></html>`;\n\n// 5. Retorno\nreturn [{\n  json: {\n    emailTo: resumen.correo,\n    emailSubject: `Resultados Evaluación: ${resumen.nota_final || 'N/A'}`,\n    emailBody: `Adjunto encontrarás tu reporte de evaluación. Nota: ${resumen.nota_final}`,\n    pdfHtml: htmlPdf,\n    pdfFileName: `Feedback_${resumen.id_evaluacion || 'Evaluacion'}.pdf` \n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        352
+      ],
+      "id": "e635ac75-55d9-46d5-829f-345a6fc52aaf",
+      "name": "mensaje1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "77c75c59-926d-4e7d-bcad-6ba4328e153f",
+              "leftValue": "={{ $json.respuesta_usuario }}",
+              "rightValue": "={{ $json.respuesta_correcta }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -192,
+        160
+      ],
+      "id": "2865ddfe-8cc4-4e14-b199-86531d384828",
+      "name": "IF"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtenemos todos los items (respuestas correctas) que entraron\nconst correctAnswers = $input.all();\n\n// Recorremos cada respuesta correcta\nfor (const item of correctAnswers) {\n  \n  // Eliminamos la propiedad 'explicacion' del JSON\n  // Si la propiedad no existe, esto no da error.\n  delete item.json.explicacion;\n}\n\n// Devolvemos los mismos items, pero ya modificados (sin explicación)\nreturn correctAnswers;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "d6f21d2c-9734-4ebb-b2d2-2ce51c0fd3b2",
+      "name": "detalle pregunta verdadera"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        224,
+        144
+      ],
+      "id": "290928e6-a2ee-4b5c-9139-505f674453bc",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        416,
+        352
+      ],
+      "id": "136e7fd1-8421-4281-b19f-571cbf2d7d12",
+      "name": "Junta_rama"
+    },
+    {
+      "parameters": {
+        "resource": "conversion",
+        "htmlContent": "={{ $json.pdfHtml }}",
+        "conversionOptions": {}
+      },
+      "type": "@pdfgeneratorapi/n8n-nodes-pdf-generator-api.pdfGeneratorApi",
+      "typeVersion": 1,
+      "position": [
+        768,
+        352
+      ],
+      "id": "f0d8b3fd-6a44-4527-879c-1d47e2212dd6",
+      "name": "Convert HTML content to PDF",
+      "credentials": {
+        "pdfGeneratorApi": {
+          "id": "WyC9Q01Zbm4T0Vj4",
+          "name": "PDF Generator account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtenemos los datos del nodo anterior\nconst items = $input.all();\n\n// Recorremos los items (usualmente es solo 1)\nfor (const item of items) {\n  // Obtenemos el texto Base64 del PDF\n  const base64String = item.json.response;\n\n  // Creamos la estructura binaria que n8n necesita para los archivos\n  item.binary = {\n    data: {\n      data: base64String,\n      mimeType: 'application/pdf',\n      fileName: 'Feedback_Evaluacion.pdf' // Puedes cambiar el nombre aquí si quieres\n    }\n  };\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1088,
+        336
+      ],
+      "id": "4d93ef3b-8f4c-49e7-99ed-ad6efcdff1ab",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 688664164,
+          "mode": "list",
+          "cachedResultName": "Resumen_Preguntas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=688664164"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        -768,
+        352
+      ],
+      "id": "9499fa39-44ff-4506-a5b9-85c8e9a9633e",
+      "name": "Google Sheets Trigger",
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "zmI6DJ3zyWCb6HRh",
+          "name": "Google Sheets Trigger account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "resumen_notas1": {
+      "main": [
+        [
+          {
+            "node": "Junta_rama",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Desgloce1": {
+      "main": [
+        [
+          {
+            "node": "IF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "mensaje1": {
+      "main": [
+        [
+          {
+            "node": "Convert HTML content to PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF": {
+      "main": [
+        [
+          {
+            "node": "detalle pregunta verdadera",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "detalle pregunta verdadera": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Junta_rama",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Junta_rama": {
+      "main": [
+        [
+          {
+            "node": "mensaje1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert HTML content to PDF": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send a message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets Trigger": {
+      "main": [
+        [
+          {
+            "node": "Desgloce1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "resumen_notas1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "b2c6e581-fe21-4263-9907-af92bd256780",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "82b6243bb049368fb06239ad362bffc670e2a8bb8b344c5ab1cc786def940e6d"
+  },
+  "id": "GVIWgVHzISM2gv0b",
+  "tags": []
+}

@@ -1,0 +1,188 @@
+{
+  "name": "Flujo Conectar formulario",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1168897056,
+          "mode": "list",
+          "cachedResultName": "Respuestas de formulario 7",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=1168897056"
+        },
+        "event": "rowUpdate",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        -480,
+        160
+      ],
+      "id": "c6f75bc6-bcdb-4343-ab3a-c1e541fbec53",
+      "name": "Google Sheets Trigger",
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "ARrlQj0rFbVaoF9B",
+          "name": "Google Sheets Trigger account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 283919094,
+          "mode": "list",
+          "cachedResultName": "Respuestas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=283919094"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Nombre Completo": "={{ $json.nombreCompleto }}",
+            "Correo": "={{ $json.correo }}",
+            "Pregunta": "={{ $json.pregunta }}",
+            "Respuesta": "={{ $json.respuesta }}"
+          },
+          "matchingColumns": [
+            "Pregunta"
+          ],
+          "schema": [
+            {
+              "id": "Nombre Completo",
+              "displayName": "Nombre Completo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Correo",
+              "displayName": "Correo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Pregunta",
+              "displayName": "Pregunta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Respuesta",
+              "displayName": "Respuesta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -64,
+        160
+      ],
+      "id": "e867de96-0479-488e-baed-85b1d10075e1",
+      "name": "GuardarRespuesta",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "zUSlXfuga1J9iASp",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst output = [];\n\n// Claves estáticas EXACTAS según llegan desde Google Forms / Sheets\nconst staticKeys = [\n    \"Marca temporal\",\n    \"Dirección de correo electrónico\",\n    \"Nombre completo\",      // por si viene así\n    \"Nombre Completo\"       // ESTA es la clave que te está faltando\n];\n\nfor (const item of items) {\n    const data = item.json;\n\n    // Detectar correctamente el nombre y correo\n    const nombreCompleto = data[\"Nombre Completo\"] || data[\"Nombre completo\"] || \"\";\n    const correo = data[\"Dirección de correo electrónico\"] || \"\";\n\n    for (const key in data) {\n        if (!staticKeys.includes(key)) {\n            // Valor de la respuesta\n            const respuesta = data[key] || \"\";\n\n            output.push({\n                json: {\n                    nombreCompleto,\n                    correo,\n                    pregunta: key,\n                    respuesta\n                }\n            });\n        }\n    }\n}\n\nreturn output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -272,
+        160
+      ],
+      "id": "36f74af0-00c8-4bfa-b94c-1bd188f7a8bb",
+      "name": "Separador de respuesta"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Sheets Trigger": {
+      "main": [
+        [
+          {
+            "node": "Separador de respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GuardarRespuesta": {
+      "main": [
+        []
+      ]
+    },
+    "Separador de respuesta": {
+      "main": [
+        [
+          {
+            "node": "GuardarRespuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "b4051e88-fea4-4a1b-b555-9a7d1bc62993",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "72c2ca3fe002840cf827f7fe313562a971a7be24988784af410caaf057abfd24"
+  },
+  "id": "xS3oxBLusGZejHGB",
+  "tags": []
+}

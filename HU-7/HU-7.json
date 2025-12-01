@@ -1,0 +1,415 @@
+{
+  "name": "Flujo Desglose Pregunta",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const respuestas = $input.all().map(i => i.json);\nconst salida = [];\n\nfor (const r of respuestas) {\n  salida.push({\n    correo: r.correo,\n    pregunta: r.pregunta,\n    respuesta_usuario: r.respuesta_usuario,\n    respuesta_correcta: r.respuesta_correcta,\n    estado: r.estado,\n    explicacion: r.explicacion,\n  });\n}\n\nreturn salida.map(u => ({ json: u }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        528,
+        160
+      ],
+      "id": "13a7c0e4-edac-4d62-aead-b6abc4bd26aa",
+      "name": "Desgloce1"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1168897056,
+          "mode": "list",
+          "cachedResultName": "Respuestas de formulario 7",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=1168897056"
+        },
+        "event": "rowUpdate",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        160
+      ],
+      "id": "183522b0-ca1e-418f-b4ca-4d5fa5f1c509",
+      "name": "Google Sheets Trigger",
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "ARrlQj0rFbVaoF9B",
+          "name": "Google Sheets Trigger account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 283919094,
+          "mode": "list",
+          "cachedResultName": "Respuestas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=283919094"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Nombre Completo": "={{ $json.nombreCompleto }}",
+            "Correo": "={{ $json.correo }}",
+            "Pregunta": "={{ $json.pregunta }}",
+            "Respuesta": "={{ $json.respuesta }}"
+          },
+          "matchingColumns": [
+            "Pregunta"
+          ],
+          "schema": [
+            {
+              "id": "Nombre Completo",
+              "displayName": "Nombre Completo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Correo",
+              "displayName": "Correo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Pregunta",
+              "displayName": "Pregunta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Respuesta",
+              "displayName": "Respuesta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        0,
+        0
+      ],
+      "id": "b8f04d16-2b86-442e-9793-8070b9bea3b1",
+      "name": "GuardarRespuesta",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "zUSlXfuga1J9iASp",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst output = [];\n\n// Claves estáticas EXACTAS según llegan desde Google Forms / Sheets\nconst staticKeys = [\n    \"Marca temporal\",\n    \"Dirección de correo electrónico\",\n    \"Nombre completo\",      // por si viene así\n    \"Nombre Completo\"       // ESTA es la clave que te está faltando\n];\n\nfor (const item of items) {\n    const data = item.json;\n\n    // Detectar correctamente el nombre y correo\n    const nombreCompleto = data[\"Nombre Completo\"] || data[\"Nombre completo\"] || \"\";\n    const correo = data[\"Dirección de correo electrónico\"] || \"\";\n\n    for (const key in data) {\n        if (!staticKeys.includes(key)) {\n            // Valor de la respuesta\n            const respuesta = data[key] || \"\";\n\n            output.push({\n                json: {\n                    nombreCompleto,\n                    correo,\n                    pregunta: key,\n                    respuesta\n                }\n            });\n        }\n    }\n}\n\nreturn output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -192,
+        160
+      ],
+      "id": "58bcf372-363e-4cd0-9ba5-a680f81cde5c",
+      "name": "Separador de respuesta"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 692677085,
+          "mode": "list",
+          "cachedResultName": "Banco_Preguntas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=692677085"
+        },
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "rangeDefinition": "detectAutomatically"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        160,
+        0
+      ],
+      "id": "bd322e35-8f6f-42c3-ac81-2f9e86f9221b",
+      "name": "Banco preguntas",
+      "executeOnce": true,
+      "alwaysOutputData": false,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "zUSlXfuga1J9iASp",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const respuestas = $input.all().map(item => item.json);\nconst banco = $items('Banco preguntas').map(item => item.json);\n\n// Índice de preguntas del banco\nconst indexBanco = new Map();\nfor (const q of banco) {\n  const key = String(q.pregunta || \"\").trim();\n  indexBanco.set(key, q);\n}\n\nconst salida = [];\n\nfor (const r of respuestas) {\n  const correo = r.correo;\n\n  // 👇 SI NO HAY CORREO, LO SALTAMOS (son filas basura / banco / cabecera)\n  if (!correo) {\n    continue;\n  }\n\n  const pregunta = String(r.pregunta || \"\").trim();\n\n  // Usa respuesta_usuario si existe, si no, usa respuesta\n  const respuestaUsuario = String(\n    r.respuesta_usuario ?? r.respuesta ?? \"\"\n  ).trim();\n\n  const registroBanco = indexBanco.get(pregunta);\n\n  let respuestaCorrectaTexto = \"No encontrada\";\n  let estado = \"Incorrecta\";\n  let explicacion = \"\";\n\n  if (registroBanco) {\n    const letra = String(registroBanco.respuesta_correcta || \"\")\n      .trim()\n      .toUpperCase();\n    const campo = \"alt_\" + letra;\n\n    const valorAlt = registroBanco[campo];\n    const valorAltStr =\n      valorAlt === undefined || valorAlt === null ? \"\" : String(valorAlt);\n\n    respuestaCorrectaTexto = valorAltStr.trim() || \"No encontrada\";\n\n    explicacion = registroBanco.explicacion\n      ? String(registroBanco.explicacion)\n      : \"\";\n\n    if (\n      respuestaUsuario !== \"\" &&\n      respuestaCorrectaTexto !== \"No encontrada\" &&\n      respuestaUsuario === respuestaCorrectaTexto\n    ) {\n      estado = \"Correcta\";\n    }\n  }\n\n  salida.push({\n    json: {\n      correo,\n      pregunta,\n      respuesta_usuario: respuestaUsuario,\n      respuesta_correcta: respuestaCorrectaTexto,\n      estado,\n      explicacion,\n    },\n  });\n}\n\nreturn salida;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        368,
+        160
+      ],
+      "id": "86d015ca-2a5d-45f3-adda-da0324613bce",
+      "name": "comparador",
+      "alwaysOutputData": false,
+      "retryOnFail": false,
+      "notesInFlow": false,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1953818244,
+          "mode": "list",
+          "cachedResultName": "Desgloce_preguntas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=1953818244"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "explicacion": "={{ $json.explicacion }}",
+            "correo": "={{ $json.correo }}",
+            "pregunta": "={{ $json.pregunta }}",
+            "respuesta_usuario": "={{ $json.respuesta_usuario }}",
+            "respuesta_correcta": "={{ $json.respuesta_correcta }}",
+            "estado": "={{ $json.estado }}"
+          },
+          "matchingColumns": [
+            "explicacion"
+          ],
+          "schema": [
+            {
+              "id": "correo",
+              "displayName": "correo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "pregunta",
+              "displayName": "pregunta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "respuesta_usuario",
+              "displayName": "respuesta_usuario",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "respuesta_correcta",
+              "displayName": "respuesta_correcta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "explicacion",
+              "displayName": "explicacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        688,
+        160
+      ],
+      "id": "cb064c46-045a-486a-a92d-e4460022e4c2",
+      "name": "Update_Desgloce",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "zUSlXfuga1J9iASp",
+          "name": "Google Sheets account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Desgloce1": {
+      "main": [
+        [
+          {
+            "node": "Update_Desgloce",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets Trigger": {
+      "main": [
+        [
+          {
+            "node": "Separador de respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GuardarRespuesta": {
+      "main": [
+        [
+          {
+            "node": "Banco preguntas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Separador de respuesta": {
+      "main": [
+        [
+          {
+            "node": "GuardarRespuesta",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "comparador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Banco preguntas": {
+      "main": [
+        [
+          {
+            "node": "comparador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "comparador": {
+      "main": [
+        [
+          {
+            "node": "Desgloce1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "b6ff883c-ffc9-4e07-bb8f-8366ed33776c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "72c2ca3fe002840cf827f7fe313562a971a7be24988784af410caaf057abfd24"
+  },
+  "id": "gSvgqzZenkq9KI5x",
+  "tags": []
+}
