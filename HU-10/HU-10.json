@@ -45,8 +45,8 @@
       "name": "resumen_notas1",
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "RycGUSJQ3Yq4bQn4",
-          "name": "Google Sheets account 2"
+          "id": "ndR7GmrZYLA1wyLN",
+          "name": "Google Sheets account 3"
         }
       }
     },
@@ -94,8 +94,8 @@
       "name": "Desgloce1",
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "RycGUSJQ3Yq4bQn4",
-          "name": "Google Sheets account 2"
+          "id": "ndR7GmrZYLA1wyLN",
+          "name": "Google Sheets account 3"
         }
       }
     },
@@ -117,8 +117,8 @@
       "webhookId": "8f1700dd-0943-4d79-8ea8-048106a9cce2",
       "credentials": {
         "gmailOAuth2": {
-          "id": "yQMLdUtcfNogKVQp",
-          "name": "Gmail account"
+          "id": "ft4FV4p8PRROWWXT",
+          "name": "Gmail account 2"
         }
       }
     },
@@ -350,7 +350,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "d53fab30-84fe-4870-9c9a-c7679b02a999",
+  "versionId": "3272fda2-a913-4d8c-b5f3-8b97bade6c8e",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "82b6243bb049368fb06239ad362bffc670e2a8bb8b344c5ab1cc786def940e6d"
