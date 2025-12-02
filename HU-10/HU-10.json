@@ -1,84 +1,35 @@
 {
-  "name": "Hu10-separado.v2(funcional)",
+  "name": "HU-10",
   "nodes": [
     {
       "parameters": {
         "documentId": {
           "__rl": true,
-          "value": "1M_YHXKsJ7cJldDlPK_y5luabhIvObkLL8OMs62hdGQc",
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
           "mode": "list",
-          "cachedResultName": "Base de conocimiento (Prueba)",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1M_YHXKsJ7cJldDlPK_y5luabhIvObkLL8OMs62hdGQc/edit?usp=drivesdk"
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
-          "value": 790671022,
-          "mode": "list",
-          "cachedResultName": "Resumen_Preguntas",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1M_YHXKsJ7cJldDlPK_y5luabhIvObkLL8OMs62hdGQc/edit#gid=790671022"
-        },
-        "filtersUI": {
-          "values": [
-            {
-              "lookupColumn": "correo",
-              "lookupValue": "={{ $items('Google Sheets Trigger')[0].json.correo }}"
-            },
-            {
-              "lookupColumn": "id_evaluacion",
-              "lookupValue": "={{ $items('Google Sheets Trigger')[0].json.id_evaluacion }}"
-            },
-            {
-              "lookupColumn": "id_intento",
-              "lookupValue": "={{ $items('Google Sheets Trigger')[0].json.id_intento }}"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.7,
-      "position": [
-        112,
-        288
-      ],
-      "id": "6299ede3-ef45-4cc5-bdf3-ce6e1fbf3fa8",
-      "name": "resumen_notas1",
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "ndR7GmrZYLA1wyLN",
-          "name": "Google Sheets account 3"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "documentId": {
-          "__rl": true,
-          "value": "1M_YHXKsJ7cJldDlPK_y5luabhIvObkLL8OMs62hdGQc",
-          "mode": "list",
-          "cachedResultName": "Base de conocimiento (Prueba)",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1M_YHXKsJ7cJldDlPK_y5luabhIvObkLL8OMs62hdGQc/edit?usp=drivesdk"
-        },
-        "sheetName": {
-          "__rl": true,
-          "value": 1692378113,
+          "value": 1953818244,
           "mode": "list",
           "cachedResultName": "Desgloce_preguntas",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1M_YHXKsJ7cJldDlPK_y5luabhIvObkLL8OMs62hdGQc/edit#gid=1692378113"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=1953818244"
         },
         "filtersUI": {
           "values": [
             {
               "lookupColumn": "correo",
-              "lookupValue": "={{ $items('Google Sheets Trigger')[0].json.correo }}"
+              "lookupValue": "={{ $json.correo }}"
             },
             {
               "lookupColumn": "id_evaluacion",
-              "lookupValue": "={{ $items('Google Sheets Trigger')[0].json.id_evaluacion }}"
+              "lookupValue": "={{ $json.id_evaluacion }}"
             },
             {
               "lookupColumn": "id_intento",
-              "lookupValue": "={{ $items('Google Sheets Trigger')[0].json.id_intento }}"
+              "lookupValue": "={{ $json.id_intento }}"
             }
           ]
         },
@@ -101,7 +52,7 @@
     },
     {
       "parameters": {
-        "sendTo": "=123joaquinromero@gmail.com",
+        "sendTo": "={{ $json.emailTo }}",
         "subject": "={{ $json.emailSubject }}",
         "message": "={{ $json.emailBody }}",
         "options": {}
@@ -124,7 +75,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// 1. Obtenemos todos los items (respuestas Y resumen)\nconst allItems = $input.all();\n\n// 2. Extraemos el item de resumen (el último de la lista)\nconst resumenItem = allItems.pop(); \nconst resumen = resumenItem.json;\n\n// 3. El resto de los items son las respuestas\nconst allAnswers = allItems.map(i => i.json);\n\n// --- 4. NUEVO: Calcular estadísticas ---\n// (Leemos los datos que vienen de la hoja \"Resumen_Preguntas\")\nconst total = parseInt(resumen.total_preguntas) || allAnswers.length;\nconst correctas = parseInt(resumen.respuestas_correctas) || 0;\nconst incorrectas = total - correctas;\nconst porcentaje = total > 0 ? ((correctas / total) * 100).toFixed(0) : 0;\n\n// --- 5. Construir el cuerpo del Email ---\nlet body = `Hola ${resumen.correo},<br><br>`;\nbody += `Hemos revisado tu evaluación. Aquí está tu resumen:<br><br>`;\n\n// --- NUEVO: Bloque de estadísticas ---\nbody += `<div style=\"background-color: #f4f4f4; border: 1px solid #ddd; padding: 15px; border-radius: 5px; margin-bottom: 20px; font-size: 1.1em;\">`;\nbody += `<strong>Nota Final: ${resumen.nota_final}</strong><br><br>`;\nbody += `<strong>Porcentaje de Acierto:</strong> ${porcentaje}%<br>`;\nbody += `<strong>Total de Preguntas:</strong> ${total}<br>`;\nbody += `<strong>Respuestas Correctas:</strong> ${correctas}<br>`;\nbody += `<strong>Respuestas Incorrectas:</strong> ${incorrectas}<br>`;\nbody += `</div>`;\n\nbody += `Este es el detalle de tus respuestas:<br><br>`;\n\n// --- 6. Recorrer TODAS las respuestas (sin cambios) ---\nfor (const item of allAnswers) {\n  body += `<div style=\"border: 1px solid #ddd; padding: 10px; margin-bottom: 15px; border-radius: 5px; background-color: #f9f9f9;\">`;\n  body += `<h3>Pregunta: ${item.pregunta}</h3>`;\n  body += `<p><strong>Tu respuesta:</strong> ${item.respuesta_usuario}</p>`;\n  body += `<p><strong>Respuesta correcta:</strong> ${item.respuesta_correcta}</p>`;\n  \n  if (item.explicacion) {\n    body += `<hr style=\"border: 0; border-top: 1px solid #eee;\">`;\n    body += `<p><strong>Explicación:</strong><br>${item.explicacion}</p>`;\n  }\n  \n  body += `</div>`;\n}\n\nbody += `<br>¡Sigue estudiando!`;\n\n// --- 7. Devolver el objeto para el email (sin cambios) ---\nreturn [{\n  json: {\n    emailTo: resumen.correo,\n    emailSubject: `Feedback de tu evaluación (Nota: ${resumen.nota_final})`,\n    emailBody: body\n  }\n}];"
+        "jsCode": "// 1. Obtenemos todos los items (respuestas Y resumen)\nconst allItems = $input.all();\n\n// 2. Extraemos el item de resumen (el último de la lista)\n// IMPORTANTE: Asegúrate de que el nodo Merge realmente ponga el resumen al final o al principio.\n// Si usas \"Merge by Position\", el orden depende de cómo entran. \n// Asumiremos que el resumen viene en el input 1 (Resumen) y las respuestas en el input 0 (Detalle).\n// Pero tu código original hacía un pop(), así que mantenemos esa lógica asumiendo que el resumen es el último.\nconst resumenItem = allItems.pop(); \nconst resumen = resumenItem.json;\n\n// 3. El resto de los items son las respuestas\nconst allAnswers = allItems.map(i => i.json);\n\n// --- 4. CÁLCULO DE ESTADÍSTICAS (Corregido para tu nueva DB) ---\n// Leemos los datos que vienen de la hoja \"Resumen_Preguntas\"\nconst total = parseInt(resumen.total_preguntas) || allAnswers.length;\n\n// CORRECCIÓN AQUÍ: En tu CSV la columna se llama 'respuesta_correctas', no 'respuestas_correctas'\nconst correctas = parseInt(resumen.respuesta_correctas) || 0; \n\nconst incorrectas = total - correctas;\nconst porcentaje = total > 0 ? ((correctas / total) * 100).toFixed(0) : 0;\n\n// --- 5. Construir el cuerpo del Email ---\n// Usamos 'correo' que viene del CSV\nlet body = `Hola ${resumen.correo},<br><br>`;\nbody += `Hemos revisado tu evaluación. Aquí está tu resumen:<br><br>`;\n\n// --- Bloque de estadísticas ---\nbody += `<div style=\"background-color: #f4f4f4; border: 1px solid #ddd; padding: 15px; border-radius: 5px; margin-bottom: 20px; font-size: 1.1em;\">`;\n// En el CSV la nota es 'nota_final'\nbody += `<strong>Nota Final: ${resumen.nota_final}</strong><br><br>`;\nbody += `<strong>Porcentaje de Acierto:</strong> ${porcentaje}%<br>`;\nbody += `<strong>Total de Preguntas:</strong> ${total}<br>`;\nbody += `<strong>Respuestas Correctas:</strong> ${correctas}<br>`;\nbody += `<strong>Respuestas Incorrectas:</strong> ${incorrectas}<br>`;\nbody += `</div>`;\n\nbody += `Este es el detalle de tus respuestas:<br><br>`;\n\n// --- 6. Recorrer las respuestas ---\n// Tus columnas en 'Desgloce_preguntas.csv' son: pregunta, respuesta_usuario, respuesta_correcta, explicacion.\n// Esto coincide con tu código, así que esta parte está bien.\nfor (const item of allAnswers) {\n  body += `<div style=\"border: 1px solid #ddd; padding: 10px; margin-bottom: 15px; border-radius: 5px; background-color: #f9f9f9;\">`;\n  body += `<h3>Pregunta: ${item.pregunta}</h3>`;\n  body += `<p><strong>Tu respuesta:</strong> ${item.respuesta_usuario}</p>`;\n  body += `<p><strong>Respuesta correcta:</strong> ${item.respuesta_correcta}</p>`;\n  \n  if (item.explicacion) {\n    body += `<hr style=\"border: 0; border-top: 1px solid #eee;\">`;\n    body += `<p><strong>Explicación:</strong><br>${item.explicacion}</p>`;\n  }\n  \n  body += `</div>`;\n}\n\nbody += `<br>¡Sigue estudiando!`;\n\n// --- 7. Devolver el objeto para el email ---\nreturn [{\n  json: {\n    emailTo: resumen.correo,\n    emailSubject: `Feedback de tu evaluación (Nota: ${resumen.nota_final})`,\n    emailBody: body\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -134,30 +85,6 @@
       ],
       "id": "dfbd5ea9-e637-4e48-bad6-8368f55a8dae",
       "name": "mensaje1"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Simula la fila de \"Resumen_Preguntas\" que quieres probar.\n// Usamos a 'nicolaipollo' porque tiene respuestas correctas e incorrectas.\nconst testData = {\n  correo: \"nicolaipollo@gmail.com\",\n  id_evaluacion: \"Prueba_Final\",\n  id_intento: \"Prueba_Final_20251115_154615\",\n  nota_final: \"3.3\" // Nota de ejemplo para este intento\n};\n\n// El flujo recibirá esto como si viniera del trigger real.\nreturn [{\n  json: testData\n}];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -400,
-        304
-      ],
-      "id": "20e67a8e-422d-41d2-8a6d-efc2ef340449",
-      "name": "Google Sheets Trigger"
-    },
-    {
-      "parameters": {},
-      "type": "n8n-nodes-base.manualTrigger",
-      "typeVersion": 1,
-      "position": [
-        -608,
-        272
-      ],
-      "id": "24b62f41-cc4f-4d45-b5c6-2a121d9a6ac6",
-      "name": "Start"
     },
     {
       "parameters": {
@@ -230,21 +157,100 @@
       ],
       "id": "4f908659-51ec-488b-8040-c6b1da2a6c96",
       "name": "Junta_rama"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 688664164,
+          "mode": "list",
+          "cachedResultName": "Resumen_Preguntas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=688664164"
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        -448,
+        176
+      ],
+      "id": "9fddf84f-5060-40c1-8d9b-7a6679a98c8b",
+      "name": "Google Sheets Trigger1",
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "utUABCqzkoOZ8S8x",
+          "name": "Google Sheets Trigger account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 688664164,
+          "mode": "list",
+          "cachedResultName": "Resumen_Preguntas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=688664164"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "correo",
+              "lookupValue": "={{ $json.correo }}"
+            },
+            {
+              "lookupColumn": "id_evaluacion",
+              "lookupValue": "={{ $json.id_evaluacion }}"
+            },
+            {
+              "lookupColumn": "id_intento",
+              "lookupValue": "={{ $json.id_intento }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        32,
+        240
+      ],
+      "id": "7abd0ed3-ec73-4c91-b3ed-e98fbbaf52b0",
+      "name": "resumen_notas1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ndR7GmrZYLA1wyLN",
+          "name": "Google Sheets account 3"
+        }
+      }
     }
   ],
   "pinData": {},
   "connections": {
-    "resumen_notas1": {
-      "main": [
-        [
-          {
-            "node": "Junta_rama",
-            "type": "main",
-            "index": 1
-          }
-        ]
-      ]
-    },
     "Desgloce1": {
       "main": [
         [
@@ -261,33 +267,6 @@
         [
           {
             "node": "Send a message2",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Google Sheets Trigger": {
-      "main": [
-        [
-          {
-            "node": "Desgloce1",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "resumen_notas1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Start": {
-      "main": [
-        [
-          {
-            "node": "Google Sheets Trigger",
             "type": "main",
             "index": 0
           }
@@ -344,13 +323,40 @@
           }
         ]
       ]
+    },
+    "Google Sheets Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Desgloce1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "resumen_notas1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "resumen_notas1": {
+      "main": [
+        [
+          {
+            "node": "Junta_rama",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "3272fda2-a913-4d8c-b5f3-8b97bade6c8e",
+  "versionId": "d7e416fc-68b8-49ff-a788-096512fc4d88",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "82b6243bb049368fb06239ad362bffc670e2a8bb8b344c5ab1cc786def940e6d"
