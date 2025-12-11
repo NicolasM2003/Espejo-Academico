@@ -1,0 +1,341 @@
+{
+  "name": "HU-16",
+  "nodes": [
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1174504737,
+          "mode": "list",
+          "cachedResultName": "Log_Entregas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=1174504737"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "id_intento",
+              "lookupValue": "={{ $json.body.id_intento }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.1,
+      "position": [
+        -512,
+        256
+      ],
+      "id": "b9275e03-0714-43b8-bf4e-7ed64e353aba",
+      "name": "Verificar Duplicado",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ndR7GmrZYLA1wyLN",
+          "name": "Google Sheets account 3"
+        }
+      },
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.id_intento}}",
+              "value2": "={{ $('Webhook').item.json.body.id_intento }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -352,
+        272
+      ],
+      "id": "4cee6e7e-8ada-4be1-8696-bfd0cb5d8153",
+      "name": "¿Ya existe?"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Log_Entregas",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id_intento": "={{ $('Webhook').item.json.body.id_intento }}",
+            "id_evaluacion": "={{ $('Webhook').item.json.body.id_evaluacion }}",
+            "correo": "=$('Webhook').item.json.body.correo || $('Webhook').item.json.body.email }}",
+            "fecha_recepcion": "={{ new Date().toISOString() }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "id_intento",
+              "displayName": "id_intento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "id_evaluacion",
+              "displayName": "id_evaluacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "correo",
+              "displayName": "correo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "fecha_recepcion",
+              "displayName": "fecha_recepcion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.1,
+      "position": [
+        -96,
+        416
+      ],
+      "id": "8ddedf8f-2157-48bd-af4f-8e6095d1c6b1",
+      "name": "Registrar Recepción",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ndR7GmrZYLA1wyLN",
+          "name": "Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Webhook').item.json.body.correo || $('Webhook').item.json.body.email }}",
+        "subject": "=Recibido: Evaluación {{ $('Webhook').item.json.body.id_evaluacion }}",
+        "message": "=<p>Hola,</p>\n\n<p>Te confirmamos que tu evaluación ha sido recepcionada <b>exitosamente</b> por nuestro sistema.</p>\n\n<ul>\n    <li><b>ID de intento:</b> {{ $('Webhook').item.json.body.id_intento }}</li>\n  \n</ul>\n\n<p>No es necesario que respondas a este correo.</p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        368,
+        416
+      ],
+      "id": "341c7232-b369-4caf-90eb-60207d5adf6d",
+      "name": "Enviar Correo Notificación",
+      "webhookId": "01a2e318-4c65-448b-8ac4-7aa93ff1c735",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "ft4FV4p8PRROWWXT",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 3
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        576,
+        416
+      ],
+      "id": "6bc4c04a-0e90-403c-a55e-393507ea41be",
+      "name": "Wait",
+      "webhookId": "40afa6b8-a5a2-4ca1-a3f6-55939e19b0c6"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Webhook').item.json.body.correo || $('Webhook').item.json.body.email }}",
+        "subject": "=Confirmación extendida de recepción – Evaluación {{ $('Registrar Recepción').item.json.id_evaluacion }}",
+        "message": "=Hola {{ $('Webhook').item.json.body.respuestas['Nombre Completo'][0] }},  Esta es una confirmación adicional de que tu evaluación  (ID de intento: {{ $('Webhook').item.json.body.id_intento }}) fue recibida correctamente en nuestro sistema.  Puedes conservar este mensaje como respaldo personal.  \n\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        832,
+        416
+      ],
+      "id": "380b3ef7-4fdc-406b-9532-62f5fab0f70e",
+      "name": "Confirmacion adicional",
+      "webhookId": "0eabecbd-aa27-49f4-858e-c28554d66cfb",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "ft4FV4p8PRROWWXT",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Webhook').item.json.body.email }}",
+        "subject": "= Error Crítico en Flujo HU-16: {{ $json.id_evaluacion || 'Desconocido' }}",
+        "message": "=<h3>Reporte de Error Automático</h3> <p>El sistema ha detectado un fallo al procesar una evaluación.</p>  <ul>      <li><strong>Nodo donde falló:</strong> {{ $json.error_node || 'Desconocido' }}</li>   <li><strong>Mensaje de Error:</strong> {{ $json.error_message || 'Sin detalles' }}</li> </ul>  <hr>  ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -48,
+        144
+      ],
+      "id": "7fe6f566-38ec-4fc2-92da-01910ea6eb5f",
+      "name": "Correo error",
+      "webhookId": "3f30b4fa-6747-4b30-aa18-f2b7659ea3f4",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "ft4FV4p8PRROWWXT",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "recibir_evaluacion",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -752,
+        288
+      ],
+      "id": "54c7fc01-2c20-48f3-a1eb-db5710e512a4",
+      "name": "Webhook",
+      "webhookId": "63d0bda0-7a99-4803-b80e-ebf3794050ce"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Verificar Duplicado": {
+      "main": [
+        [
+          {
+            "node": "¿Ya existe?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Ya existe?": {
+      "main": [
+        [
+          {
+            "node": "Correo error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Registrar Recepción",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Recepción": {
+      "main": [
+        [
+          {
+            "node": "Enviar Correo Notificación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Correo Notificación": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Confirmacion adicional",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Verificar Duplicado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "2fc39f8b-cb2c-4d9b-bb43-d4472104c2bf",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "82b6243bb049368fb06239ad362bffc670e2a8bb8b344c5ab1cc786def940e6d"
+  },
+  "id": "OpkJ94BE0rHFsfmJ",
+  "tags": []
+}
