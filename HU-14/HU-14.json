@@ -1,0 +1,153 @@
+{
+  "name": "Estadisticas_Agregadas",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "estadisticas-evaluacion",
+        "options": {}
+      },
+      "id": "2ef98098-210a-473d-bda8-04dae09a0ca9",
+      "name": "Solicitar Estadísticas",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -896,
+        112
+      ],
+      "webhookId": "eac1c2a9-bc47-453a-accf-760b53689785"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1953818244,
+          "mode": "list",
+          "cachedResultName": "Desgloce_preguntas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=1953818244"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "id_evaluacion",
+              "lookupValue": "={{ $json.id_evaluacion }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "05a241d1-7994-4419-b733-b00424a8261b",
+      "name": "Leer Respuestas",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -608,
+        112
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "zUSlXfuga1J9iASp",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Datos\nconst registros = $input.all().map(i => i.json);\n\nif (registros.length === 0) {\n  return [{ json: { error: 'No existen registros para este id_evaluacion' }}];\n}\n\n// Limpieza: excluir incompletos\nconst completos = registros.filter(r => r.respuesta_usuario && r.respuesta_correcta);\nconst incompletos = registros.length - completos.length;\n\n// Distribución y conteo\nconst total = completos.length;\nlet correctas = 0;\nconst fallosPorPregunta = {};\n\nfor (const r of completos) {\n  const esCorrecta = r.respuesta_usuario === r.respuesta_correcta;\n  if (esCorrecta) correctas++;\n  else {\n    const p = r.pregunta;\n    if (!fallosPorPregunta[p]) fallosPorPregunta[p] = 0;\n    fallosPorPregunta[p]++;\n  }\n}\n\n// Métricas\nconst promedioAcierto = Number(((correctas / total) * 100).toFixed(2));\nconst preguntasOrdenadas = Object.entries(fallosPorPregunta)\n  .sort((a, b) => b[1] - a[1])\n  .map(([pregunta, fallos]) => ({ pregunta, fallos }));\n\nreturn [{\n  json: {\n    total_respuestas_analizadas: total,\n    respuestas_incompletas: incompletos,\n    promedio_acierto: promedioAcierto,\n    preguntas_mas_falladas: preguntasOrdenadas.slice(0, 5),\n    distribucion_fallos: preguntasOrdenadas\n  }\n}];"
+      },
+      "id": "fad272fb-d7f9-4ede-95f0-5bec1287c496",
+      "name": "Calcular Estadísticas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -304,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "84aa3df5-f0b0-40aa-bebe-5948691aeb0d",
+      "name": "Responder al docente",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        -16
+      ],
+      "id": "5a2d55ec-bd73-4f5a-ab83-4b71cb312878",
+      "name": "Generar CSV"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Solicitar Estadísticas": {
+      "main": [
+        [
+          {
+            "node": "Leer Respuestas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer Respuestas": {
+      "main": [
+        [
+          {
+            "node": "Calcular Estadísticas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular Estadísticas": {
+      "main": [
+        [
+          {
+            "node": "Responder al docente",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Generar CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "d6c84f87-cb20-47b0-92fc-3594dcb6a6c2",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "72c2ca3fe002840cf827f7fe313562a971a7be24988784af410caaf057abfd24"
+  },
+  "id": "q0WnDE87YBdwDBOE",
+  "tags": []
+}

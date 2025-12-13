@@ -1,0 +1,178 @@
+{
+  "name": "Validación Estudiantes (Sin RespondToWebhook)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "validar-estudiante",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "a85810ce-2088-409d-ae8a-34a8d6fe7d9e",
+      "name": "Webhook_Entrada",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        176,
+        112
+      ],
+      "webhookId": "e94d902b-d137-43ea-b4e1-197d366bd4d7"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1593002130,
+          "mode": "list",
+          "cachedResultName": "Autorizados",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=1593002130"
+        },
+        "options": {}
+      },
+      "id": "0bd00f78-af84-424e-82ad-7e5125f81a97",
+      "name": "Leer_Autorizados",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        416,
+        -48
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "zUSlXfuga1J9iASp",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const entrada = $input.item.json;\n\nconst email = (entrada.email || '').trim().toLowerCase();\nconst token = (entrada.token || '').trim();\n\nconst registros = $items('Leer_Autorizados').map(i => i.json);\n\nlet autorizado = false;\nlet motivo = \"\";\nlet estudiante = null;\n\nfor (const row of registros) {\n  const rowEmail = String(row.email || '').trim().toLowerCase();\n  const rowToken = String(row.token || '').trim();\n  const activo = String(row.activo || '').trim().toLowerCase() === 'si';\n\n  if (!activo) continue;\n\n  if (email === rowEmail || token === rowToken) {\n    autorizado = true;\n    estudiante = row;\n    break;\n  }\n}\n\nif (!autorizado) motivo = 'Credenciales inválidas';\n\nreturn [{\n  json: {\n    autorizado,\n    motivo,\n    estudiante,\n    ...entrada\n  }\n}];"
+      },
+      "id": "82b466a0-2f9b-4bc6-b13b-b4e35a912c89",
+      "name": "Validar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.autorizado }}"
+            }
+          ]
+        }
+      },
+      "id": "9dab923b-8f43-41d0-9d53-5e9f5020b3a2",
+      "name": "IF_Autorizado",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        896,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { status: 'authorized', email: $json.email, token: $json.token } }];"
+      },
+      "id": "c316dd85-98dd-49da-84c9-5226f3c47544",
+      "name": "Respuesta_OK",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1168,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { status: 'denied', motivo: $json.motivo } }];"
+      },
+      "id": "927b5187-c1ee-42cf-9bb7-d0b0ec3bdf31",
+      "name": "Respuesta_Denegado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1168,
+        -48
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook_Entrada": {
+      "main": [
+        [
+          {
+            "node": "Leer_Autorizados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer_Autorizados": {
+      "main": [
+        [
+          {
+            "node": "Validar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar": {
+      "main": [
+        [
+          {
+            "node": "IF_Autorizado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_Autorizado": {
+      "main": [
+        [
+          {
+            "node": "Respuesta_Denegado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respuesta_OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "8e0c0355-4078-4698-bb50-d3de33421ca5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "72c2ca3fe002840cf827f7fe313562a971a7be24988784af410caaf057abfd24"
+  },
+  "id": "g3R15DdaO8mEcAAG",
+  "tags": []
+}

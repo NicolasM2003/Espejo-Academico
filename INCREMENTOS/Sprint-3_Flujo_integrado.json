@@ -1,0 +1,2571 @@
+{
+  "name": "flujo_incrementoSolucionado",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        304,
+        -96
+      ],
+      "id": "76ab75d9-d479-4830-bb3b-a547b78ec67e",
+      "name": "Junta_rama",
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. OBTENER ITEMS Y FILTRAR PREGUNTAS\nlet items = $input.all();\nitems = items.filter(i => i.json.pregunta);\nitems = items.filter((item, index, arr) =>\n  index === arr.findIndex(t => t.json.id_detalle === item.json.id_detalle)\n);\nitems.sort((a, b) => (a.json.id_detalle > b.json.id_detalle ? 1 : -1));\n\n// 2. OBTENER RESUMEN\nconst allInputs = $input.all();\nconst resumenItem = allInputs.find(i => i.json.nota_final);\n\nlet nombre_estudiante = \"Estudiante\";\ntry {\n  const nodoNombre = $('Normalizador_respuestas').first();\n  if (nodoNombre && nodoNombre.json.nombre_completo) {\n    nombre_estudiante = nodoNombre.json.nombre_completo;\n  }\n} catch (e) {}\n\n// Resumen\nconst resumen = resumenItem ? resumenItem.json : {};\nresumen.nombre_estudiante = nombre_estudiante;\n\n\n// 3. NORMALIZACIÓN\nfunction normalize(str) {\n  return (str || \"\")\n    .toString()\n    .trim()\n    .toLowerCase()\n    .replace(/^correcta:\\s*/i, \"\")\n    .replace(/^✔\\s*/i, \"\")\n    .replace(/\\s+/g, \" \");\n}\n\nfor (const item of items) {\n  const data = item.json;\n  data.originalUsuario = data.respuesta_usuario || \"\";\n  data.originalCorrecta = data.respuesta_correcta || \"\";\n  data.usuarioLimpio = normalize(data.respuesta_usuario);\n  data.correctaLimpia = normalize(data.respuesta_correcta);\n  data.esCorrectaReal = data.usuarioLimpio === data.correctaLimpia;\n}\n\n// 4. CÁLCULOS\nconst total = items.length;\nconst correctas = items.filter(item => item.json.esCorrectaReal).length;\nconst porcentaje = total > 0 ? ((correctas / total) * 100).toFixed(0) : 0;\n\n// 5. GENERAR HTML FINAL\nlet htmlPdf = `\n<html>\n<head>\n<style>\n\n  /* Márgenes de página */\n  @page {\n    margin-top: 40px;\n    margin-bottom: 40px;\n  }\n\n  body {\n    font-family: Helvetica, Arial, sans-serif;\n    padding: 40px 60px;\n    font-size: 14px;\n    color: #333;\n    line-height: 1.6;\n    -webkit-print-color-adjust: exact;\n    print-color-adjust: exact;\n  }\n\n  h1 {\n    font-size: 26px;\n    margin-bottom: 12px;\n    font-weight: 600;\n  }\n\n  h2 {\n    font-size: 20px;\n    font-weight: 600;\n    margin-top: 35px;\n    margin-bottom: 20px;\n  }\n\n  /* Información del estudiante */\n  .header-info { margin-bottom: 25px; font-size: 15px; }\n  .header-info div { margin-bottom: 4px; }\n\n  .header-info strong {\n    display: inline-block;\n    min-width: 85px;\n  }\n\n  /* Caja Resumen */\n  .stats-box {\n    border: 1px solid #ddd;\n    padding: 18px 22px;\n    background: #fafafa;\n    border-radius: 8px;\n    margin-bottom: 35px;\n    break-inside: avoid;\n  }\n\n  .stats-box p strong {\n    font-size: 16px;\n    color: #007bff;\n  }\n\n  /* ========================= */\n  /*   CONTENEDOR DE PREGUNTA  */\n  /* ========================= */\n\n  .pregunta-container {\n    padding-top: 10px;\n    padding-bottom: 22px;\n    border-bottom: 1px solid #e5e5e5;\n    break-inside: avoid;\n    page-break-inside: avoid;\n  }\n\n  .pregunta-container:last-child {\n    border-bottom: none;\n  }\n\n  .pregunta-titulo {\n    font-weight: 600;\n    font-size: 15px;\n    margin-bottom: 6px;\n    display: block;\n  }\n\n  \n  .pregunta-incorrecta {\n      background: #ffecec; /* rojo muy suave */\n      border-left: 4px solid #d9534f; /* rojo fuerte */\n      padding: 18px 18px 22px 18px;\n      border-radius: 6px;\n      margin-bottom: 30px;\n      margin-top: 25px;\n  \n      break-inside: avoid;\n      page-break-inside: avoid;\n  }\n  \n  /* El título mantiene el estilo normal, solo reforzamos color */\n  .pregunta-incorrecta .pregunta-titulo {\n      color: #333333; \n      font-weight: 700;\n      margin-bottom: 10px;\n  }\n\n\n  .status-correcta {\n    color: #28a745;\n    font-weight: 600;\n    margin-top: 6px;\n  }\n\n  .status-incorrecta {\n    color: #d9534f;\n    font-weight: 600;\n    margin-top: 6px;\n  }\n\n  .respuesta-correcta-esperada {\n    margin-top: 8px;\n    font-size: 14px;\n  }\n\n  .explicacion-box {\n    background: #fff7d6;\n    border-left: 4px solid #ffc34d;\n    padding: 12px;\n    margin-top: 12px;\n    border-radius: 4px;\n    font-size: 13px;\n    break-inside: avoid;\n  }\n\n</style>\n</head>\n\n<body>\n\n<h1>Reporte de Evaluación</h1>\n\n<div class=\"header-info\">\n  <div><strong>Estudiante:</strong> ${resumen.nombre_estudiante}</div>\n  <div><strong>Correo:</strong> ${resumen.correo}</div>\n</div>\n\n<div class=\"stats-box\">\n  <h3>Resumen de Resultados</h3>\n  <p><strong>Nota Final:</strong> ${resumen.nota_final}</p>\n  <p><strong>Acierto:</strong> ${porcentaje}% (${correctas}/${total})</p>\n</div>\n\n<h2>Detalle de respuestas:</h2>\n`;\n\n// 6. PREGUNTAS\nfor (const item of items) {\n  const data = item.json;\n\n  const className = data.esCorrectaReal\n    ? \"pregunta-container\"\n    : \"pregunta-container pregunta-incorrecta\";\n\n  htmlPdf += `<div class=\"${className}\">`;\n\n  htmlPdf += `<span class=\"pregunta-titulo\">${data.pregunta}</span>`;\n  htmlPdf += `<div class=\"respuesta-usuario\"><strong>Tu respuesta:</strong> ${data.originalUsuario}</div>`;\n\n  if (data.esCorrectaReal) {\n    htmlPdf += `<div class=\"status-correcta\">✅ Correcto</div>`;\n  } else {\n    htmlPdf += `<div class=\"status-incorrecta\">❌ Incorrecto</div>`;\n    htmlPdf += `<div class=\"respuesta-correcta-esperada\"><strong>Correcta:</strong> ${data.originalCorrecta}</div>`;\n\n    if (data.explicacion) {\n      htmlPdf += `\n        <div class=\"explicacion-box\">\n          <strong>Explicación:</strong> ${data.explicacion}\n        </div>`;\n    }\n  }\n\n  htmlPdf += `</div>`;\n}\n\nhtmlPdf += `</body></html>`;\n\n// 7. RETORNAR\nreturn [{\n  json: {\n    emailTo: resumen.correo,\n    emailSubject: `Resultados Evaluación: ${resumen.nota_final}`,\n    emailBody: `\n      Hola,<br><br>\n      Tu evaluación ha sido revisada.<br><br>\n      <strong>Nota Final:</strong> ${resumen.nota_final}<br>\n      <strong>Acierto:</strong> ${porcentaje}% (${correctas}/${total})<br><br>\n      Se adjunta el PDF con el desglose completo.<br><br>\n      Saludos.\n    `,\n    pdfHtml: htmlPdf,\n    pdfFileName: `Feedback_${resumen.id_evaluacion}.pdf`\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        544,
+        -96
+      ],
+      "id": "325d88d9-e07d-46ba-a13e-d21c73d63d65",
+      "name": "mensaje",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const respuestas = $items('Normalizador_respuestas').map(i => i.json);\n\nlet banco = [];\ntry {\n  banco = $items('Banco preguntas').map(i => i.json);\n} catch (e) {\n  banco = [];\n}\n\n// Helper de normalización\nfunction norm(str) {\n  return String(str || '').trim().toLowerCase();\n}\n\n// Crear índice del banco\nconst indexBanco = new Map();\n\nfor (const q of banco) {\n  const idEval = String(q.id_evaluacion || '').trim();\n  const preguntaNorm = norm(q.pregunta);\n  const key = `${idEval}|||${preguntaNorm}`;\n  indexBanco.set(key, q);\n\n  if (!idEval) {\n    const keySinEval = `|||${preguntaNorm}`;\n    if (!indexBanco.has(keySinEval)) indexBanco.set(keySinEval, q);\n  }\n}\n\nconst salida = [];\n\nfor (const r of respuestas) {\n\n  const correo = r.correo || \"SIN_CORREO_DETECTADO\"; \n\n  const id_evaluacion = r.id_evaluacion;\n  const id_intento = r.id_intento;\n  const nombre_completo = r.nombre_completo;\n\n  const preguntaOriginal = String(r.pregunta || \"\").trim();\n  const preguntaNorm = norm(preguntaOriginal);\n  const respuestaUsuario = String(r.respuesta_usuario ?? r.respuesta ?? \"\").trim();\n\n  const keyConEval = `${String(id_evaluacion || '').trim()}|||${preguntaNorm}`;\n  let registroBanco = indexBanco.get(keyConEval);\n\n  if (!registroBanco) {\n    const keySinEval = `|||${preguntaNorm}`;\n    registroBanco = indexBanco.get(keySinEval);\n  }\n\n  let respuestaCorrectaTexto = \"No encontrada\";\n  let estado = \"Incorrecta\";\n  let explicacion = \"\";\n\n  if (registroBanco) {\n    const letra = String(registroBanco.respuesta_correcta || \"\").trim().toUpperCase();\n    const campo = \"alt_\" + letra;\n\n    const valorAlt = registroBanco[campo];\n    const valorAltStr = valorAlt == null ? \"\" : String(valorAlt);\n\n    respuestaCorrectaTexto = valorAltStr.trim() || \"No encontrada\";\n    explicacion = registroBanco.explicacion ? String(registroBanco.explicacion) : \"\";\n\n    if (\n      respuestaUsuario !== \"\" &&\n      respuestaCorrectaTexto !== \"No encontrada\" &&\n      respuestaUsuario.toLowerCase() === respuestaCorrectaTexto.toLowerCase()\n    ) {\n      estado = \"Correcta\";\n    }\n  }\n\n  salida.push({\n    json: {\n      id_evaluacion,\n      id_intento,\n      nombre_completo,\n      correo, \n      pregunta: preguntaOriginal,\n      respuesta_usuario: respuestaUsuario,\n      respuesta_correcta: respuestaCorrectaTexto,\n      estado,\n      explicacion,\n\n    },\n  });\n}\n\nreturn salida;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1088,
+        -176
+      ],
+      "id": "80be9d61-57a8-4865-8147-f9dfcc947f3a",
+      "name": "comparador",
+      "alwaysOutputData": false,
+      "retryOnFail": false,
+      "notesInFlow": false,
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "jsCode": "// =======================================\n// 1. Obtener todas las filas del desglose\n// =======================================\nconst desglose = $input.all().map(item => item.json);\n\n// Agrupación por evaluación + intento + correo\nconst porIntento = {};\n\nfunction normEstado(str) {\n  return String(str || \"\")\n    .trim()\n    .toLowerCase()\n    .replace(/\\s+/g, \" \");\n}\n\nfor (const fila of desglose) {\n  const id_evaluacion = String(fila.id_evaluacion || '').trim();\n  const id_intento = String(fila.id_intento || fila.hash_intento || '').trim();\n  const correo = String(fila.correo || '').trim();\n  const nombre_completo = fila.nombre_completo || '';\n\n  const key = `${id_evaluacion}||${id_intento}||${correo}`;\n\n  if (!porIntento[key]) {\n    porIntento[key] = {\n      id_evaluacion,\n      id_intento,\n      correo,\n      nombre_completo,\n      total_preguntas: 0,\n      respuestas_correctas: 0,\n    };\n  }\n\n  porIntento[key].total_preguntas += 1;\n\n  const estado = normEstado(fila.estado);\n  if (estado === \"correcta\" || estado === \"correcto\") {\n    porIntento[key].respuestas_correctas += 1;\n  }\n}\n\n// ===============================\n// 2. Construcción del resumen final\n// ===============================\nconst salida = [];\n\nfor (const key in porIntento) {\n  const data = porIntento[key];\n\n  const porcentaje =\n    data.total_preguntas > 0\n      ? data.respuestas_correctas / data.total_preguntas // ← AHORA DECIMAL\n      : 0;\n\n  const nota_final = (1 + porcentaje * 6).toFixed(2);\n\n  salida.push({\n    json: {\n      id_evaluacion: data.id_evaluacion,\n      id_intento: data.id_intento,\n      correo: data.correo,\n      nombre_completo: data.nombre_completo,\n      total_preguntas: data.total_preguntas,\n      respuestas_correctas: data.respuestas_correctas,\n      porcentaje_aciertos: porcentaje, // ← decimal 0–1\n      nota_final,\n    },\n  });\n}\n\nreturn salida;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -752,
+        -240
+      ],
+      "id": "37ee306f-66a4-42a1-9f79-28312b042efc",
+      "name": "Calcular Nota",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 688664164,
+          "mode": "list",
+          "cachedResultName": "Resumen_Usuario",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=688664164"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {
+            "correo": "={{ $json.correo }}",
+            "total_preguntas": "={{ $json.total_preguntas }}",
+            "porcentaje_aciertos": "={{ $json.porcentaje_aciertos }}",
+            "nota_final": "={{ $json.nota_final }}",
+            "id_intento": "={{ $json.id_intento }}",
+            "id_evaluacion": "={{ $json.id_evaluacion }}",
+            "nombre_completo": "={{ $json.nombre_completo }}"
+          },
+          "matchingColumns": [
+            "id_intento"
+          ],
+          "schema": [
+            {
+              "id": "correo",
+              "displayName": "correo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "nombre_completo",
+              "displayName": "nombre_completo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "total_preguntas",
+              "displayName": "total_preguntas",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "respuestas_correctas",
+              "displayName": "respuestas_correctas",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "porcentaje_aciertos",
+              "displayName": "porcentaje_aciertos",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "nota_final",
+              "displayName": "nota_final",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "id_intento",
+              "displayName": "id_intento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "id_evaluacion",
+              "displayName": "id_evaluacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -544,
+        -240
+      ],
+      "id": "8f66b7a4-1893-4311-b737-b9c10e87e8be",
+      "name": "Update_Resumen notas",
+      "executeOnce": false,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DUMcbZS9dZVF1dEG",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const root = items[0].json;\n\n\nlet entrada = root.body || root;\n\nif (typeof entrada === 'string') {\n  try {\n    entrada = JSON.parse(entrada);\n  } catch (e) {\n    return [];\n  }\n}\n\nconst id_evaluacion = entrada.id_evaluacion;\n\nconst id_intento =\n  entrada.id_intento ||   \n  entrada.data ||         \n  entrada.hash_intento || \n  \"\";\n\n// Correo (puede venir como \"correo\" o \"email\")\nconst correo = entrada.correo || entrada.email || \"\";\n\nconst respuestas = entrada.respuestas || {};\n\nlet nombre_completo =\n  entrada.nombre_completo ||\n  entrada[\"Nombre Completo\"] ||\n  entrada.nombre ||\n  \"\";\n\n// Si sigue vacío y existe en respuestas → lo tomamos\nif (!nombre_completo && respuestas[\"Nombre Completo\"]) {\n  const arr = respuestas[\"Nombre Completo\"];\n  if (Array.isArray(arr) && arr.length > 0) {\n    nombre_completo = String(arr[0]).trim();\n  }\n}\n\n// Campos que NO son preguntas\nconst camposIgnorar = new Set([\n  \"Nombre Completo\",\n  \"Marca temporal\",\n  \"Dirección de correo electrónico\",\n  \"Puntuación\",\n]);\n\nconst salida = [];\n\nfor (const tituloPregunta of Object.keys(respuestas)) {\n  if (camposIgnorar.has(tituloPregunta)) continue;\n\n  const respuestaArray = respuestas[tituloPregunta] || [];\n  const respuestaUsuario =\n    respuestaArray.length > 0 ? String(respuestaArray[0]).trim() : \"\";\n\n  salida.push({\n    json: {\n      id_evaluacion,\n      id_intento,\n      correo,\n      nombre_completo,\n      pregunta: tituloPregunta,\n      respuesta_usuario: respuestaUsuario,\n    },\n  });\n}\n\nreturn salida;\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1696,
+        -176
+      ],
+      "id": "eb7aea8f-05da-4536-9e15-653b04dcc4c9",
+      "name": "Normalizador_respuestas"
+    },
+    {
+      "parameters": {
+        "jsCode": "const respuestas = $input.all().map(i => i.json);\nconst salida = [];\n\nfor (let idx = 0; idx < respuestas.length; idx++) {\n  const r = respuestas[idx];\n\n  const id_evaluacion = r.id_evaluacion;\n  const id_intento = r.id_intento;\n  const correo = r.correo;\n\n  // ID único por detalle (pregunta dentro del intento)\n  const id_detalle = `${id_intento}_${idx + 1}`;\n\n  salida.push({\n    json: {\n      id_evaluacion,\n      id_intento,\n      id_detalle,\n      correo,\n      pregunta: r.pregunta,\n      respuesta_usuario: r.respuesta_usuario,\n      respuesta_correcta: r.respuesta_correcta,\n      estado: r.estado,\n      explicacion: r.explicacion,\n    },\n  });\n}\n\nreturn salida;\nreturn salida;\n\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -752,
+        -80
+      ],
+      "id": "834a23f8-1816-4af3-9d3a-f371a822adbf",
+      "name": "Desgloce",
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1953818244,
+          "mode": "list",
+          "cachedResultName": "Desgloce_preguntas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=1953818244"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id_detalle": "={{ $json.id_detalle }}",
+            "explicacion": "={{ $json.explicacion }}",
+            "correo": "={{ $json.correo }}",
+            "pregunta": "={{ $json.pregunta }}",
+            "respuesta_usuario": "={{ $json.respuesta_usuario }}",
+            "respuesta_correcta": "={{ $json.respuesta_correcta }}",
+            "estado": "={{ $json.estado }}",
+            "id_evaluacion": "={{ $json.id_evaluacion }}",
+            "id_intento": "={{ $json.id_intento }}"
+          },
+          "matchingColumns": [
+            "id_detalle"
+          ],
+          "schema": [
+            {
+              "id": "correo",
+              "displayName": "correo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "pregunta",
+              "displayName": "pregunta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "respuesta_usuario",
+              "displayName": "respuesta_usuario",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "respuesta_correcta",
+              "displayName": "respuesta_correcta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "explicacion",
+              "displayName": "explicacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "id_detalle",
+              "displayName": "id_detalle",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "id_intento",
+              "displayName": "id_intento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "id_evaluacion",
+              "displayName": "id_evaluacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -208,
+        -80
+      ],
+      "id": "2b2f83f4-3698-4d89-95e5-b438d4f28ee7",
+      "name": "Update_Explicacion",
+      "executeOnce": false,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DUMcbZS9dZVF1dEG",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\n\nconst salida = [];\n\nfor (const item of items) {\n  const data = item.json;\n\n  // Verificamos si la respuesta es correcta\n  const esCorrecta = data.respuesta_usuario === data.respuesta_correcta;\n\n  if (esCorrecta) {\n    // Eliminamos la explicación si es correcta\n    delete data.explicacion;\n  }\n\n  // Agregamos el item modificado a la salida\n  salida.push({ json: data });\n}\n\nreturn salida;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -512,
+        -80
+      ],
+      "id": "97d84a9f-4b16-4956-87c2-395848f2d860",
+      "name": "separador",
+      "retryOnFail": false,
+      "maxTries": 5,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "bf1d9d26-3952-4992-b772-75a5c22dddf8",
+              "name": "raw_payload",
+              "value": "={{ JSON.stringify($json.body || $json) }}",
+              "type": "string"
+            },
+            {
+              "id": "8aa05881-aea7-4f78-ad7d-5eac3ac7f313",
+              "name": "received_at",
+              "value": "={{ new Date().toISOString() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2448,
+        -160
+      ],
+      "id": "22f52bee-9ccc-4d57-94c0-02a0046bf426",
+      "name": "Save_Entrada_Bruta"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1) OBTENER EL PAYLOAD REAL DESDE raw_payload\n\nlet raw = $json.raw_payload;\nlet payload;\n\n// Si viene como objeto, usarlo directamente\nif (typeof raw === \"object\") {\n  payload = raw;\n}\n\n// Si viene como string, limpiarlo y parsearlo\nif (typeof raw === \"string\") {\n  try {\n    let cleaned = raw\n      .replace(/\\\\\"/g, '\"')   \n      .replace(/\"{/g, '{')    \n      .replace(/}\"/g, '}');   \n    payload = JSON.parse(cleaned);\n  } catch (e) {\n    return {\n      ok: false,\n      error: \"RAW_PAYLOAD inválido\",\n      detalle: raw\n    };\n  }\n}\n\n// 2) VALIDAR CAMPOS OBLIGATORIOS REALES DEL FLUJO\nconst required = [\"id_evaluacion\", \"id_intento\", \"correo\", \"respuestas\"];\nconst faltantes = required.filter(k => !payload[k]);\n\nif (faltantes.length > 0) {\n  return {\n    ok: false,\n    error: \"JSON con campos faltantes\",\n    faltantes,\n    detalle: payload\n  };\n}\n\n\n// 3) SI TODO ESTÁ OK → devolver JSON limpio\nreturn {\n  ok: true,\n  payload\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2272,
+        -160
+      ],
+      "id": "2583d1de-e775-446d-8d22-0c896c1bd7de",
+      "name": "Normalizador_JSON"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "bc093a6e-e6aa-418c-979f-21257083e909",
+              "leftValue": "={{$json.ok}}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2080,
+        -160
+      ],
+      "id": "3482e117-cc23-4f2f-ba85-a576f546d759",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a423f917-135e-42b7-a550-21131cec9f67",
+              "name": "body",
+              "value": "={{ $json.payload }}",
+              "type": "string"
+            },
+            {
+              "id": "e801dbb5-000b-41fe-867f-46d2bfc83f23",
+              "name": "received_at",
+              "value": "={{ $now }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1888,
+        -176
+      ],
+      "id": "3b4c372c-8946-45d5-aee5-5cd1526dae86",
+      "name": "Guardado_Temporal"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0db83816-135f-41fa-a311-9922a20c1588",
+              "name": "tipo_error",
+              "value": "\"entrada_json\"",
+              "type": "string"
+            },
+            {
+              "id": "6e12f125-bd01-4015-9bfb-40fb9a2850f2",
+              "name": "nebsahe",
+              "value": "=={{ $json.error || 'Error en JSON de entrada' }}",
+              "type": "string"
+            },
+            {
+              "id": "d3a7b838-193b-4128-8887-831a5bbecf67",
+              "name": "detalle",
+              "value": "={{ $json.detalle }}",
+              "type": "string"
+            },
+            {
+              "id": "e7128edd-04fd-4f36-8e40-7be66ece5baf",
+              "name": "fecha",
+              "value": "=={{ $now }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1888,
+        -32
+      ],
+      "id": "3ab32088-4dd6-405b-b692-5bf486747896",
+      "name": "Error_JSON_Entrada"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('mensaje').item.json.emailTo }}",
+        "subject": "={{ $('mensaje').first().json.emailSubject }}",
+        "message": "={{ $('mensaje').first().json.emailBody }}",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {}
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1248,
+        -96
+      ],
+      "id": "b89c367c-b36e-470b-9962-01cb401a9c2c",
+      "name": "RetroAlimentacion_Estudiante",
+      "webhookId": "8f1700dd-0943-4d79-8ea8-048106a9cce2",
+      "retryOnFail": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "0oHUy8LBbnmb6P4U",
+          "name": "Gmail account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 688664164,
+          "mode": "list",
+          "cachedResultName": "Resumen_Preguntas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=688664164"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "correo",
+              "lookupValue": "={{ $json.correo }}"
+            },
+            {
+              "lookupColumn": "id_intento",
+              "lookupValue": "={{ $json.id_intento }}"
+            },
+            {
+              "lookupColumn": "id_evaluacion",
+              "lookupValue": "={{ $json.id_evaluacion }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -128,
+        -240
+      ],
+      "id": "1ca1da44-3012-4d80-8cdb-d04c4f369e57",
+      "name": "resumen_notas",
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 500,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DUMcbZS9dZVF1dEG",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1196241582,
+          "mode": "list",
+          "cachedResultName": "logs_errores_correo",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=1196241582"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "timestamp": "=={{ $now }}",
+            "correo_destino": "={{ $json.emailTo || '' }}",
+            "asunto": "=={{ $json.emailSubject || 'Sin asunto' }}",
+            "error_mensaje": "=={{ $json.error }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "correo_destino",
+              "displayName": "correo_destino",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "asunto",
+              "displayName": "asunto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "error_code",
+              "displayName": "error_code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "error_mensaje",
+              "displayName": "error_mensaje",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1728,
+        -576
+      ],
+      "id": "90abbdfe-7ece-4ba6-ae49-a4499b76880a",
+      "name": "logs_errores_correo",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DUMcbZS9dZVF1dEG",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "espejoacademicounab2@hotmail.com",
+        "subject": "⚠️ Error en envío automático a estudiante",
+        "message": "=<h3>Se detectó un error al enviar un correo al estudiante</h3>  <p><b>Destino:</b> {{ $json.correo_destino }}</p> <p><b>Error:</b> {{ $json.error_mensaje }}</p> <p><b>Fecha:</b> {{ $json.timestamp }}</p>  <p>Revisa la hoja <b>logs_errores_correo</b> para más detalles.</p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1920,
+        -576
+      ],
+      "id": "0fa9e835-ee21-4ff5-8d6a-6120ae249e1b",
+      "name": "Alerta_Admin",
+      "webhookId": "05855bad-fbbb-40cf-ba96-0d898ddadb79",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "0oHUy8LBbnmb6P4U",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "75a041ba-893d-4c88-99f4-ab7c1b0e0418",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1440,
+        -96
+      ],
+      "id": "73cf4c63-d8fb-450f-8e5d-bb75fbe95a54",
+      "name": "Error al enviar correo"
+    },
+    {
+      "parameters": {
+        "value": "={{ $json.id_evaluacion + '_' + $json.correo + '_' + Date.now() }}"
+      },
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 1,
+      "position": [
+        -4752,
+        -96
+      ],
+      "id": "c10de316-e747-466d-ae9f-2ee4c6f3530a",
+      "name": "crypto"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1dcbf60a-8b4f-4320-baba-c27889c9852d",
+              "name": "id_evaluacion",
+              "value": "={{ $json.body.id_evaluacion }}",
+              "type": "string"
+            },
+            {
+              "id": "0b825bc1-6bd1-4865-9def-05b6cabac804",
+              "name": "id_intento",
+              "value": "={{ $json.body.id_intento }}",
+              "type": "string"
+            },
+            {
+              "id": "fe48aabe-3b00-453c-bd13-7837a40f9292",
+              "name": "correo",
+              "value": "={{ $json.body.email }}",
+              "type": "string"
+            },
+            {
+              "id": "e1f56b62-1e80-4b13-8ed4-4c414987a600",
+              "name": "respuestas",
+              "value": "={{ $json.body.respuestas }}",
+              "type": "string"
+            },
+            {
+              "id": "38c75701-1e44-4487-a3f1-c414479a30c0",
+              "name": "timestamp",
+              "value": "={{ $json.body.timestamp }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2688,
+        -32
+      ],
+      "id": "6974fbcb-30c8-4416-b3c8-c541f6e1512c",
+      "name": "construccion_payload",
+      "alwaysOutputData": true,
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 500
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 692677085,
+          "mode": "list",
+          "cachedResultName": "Banco_Preguntas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=692677085"
+        },
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "rangeDefinition": "detectAutomatically"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -1536,
+        -272
+      ],
+      "id": "ae1fbf03-43ac-4016-bb47-b65b8860930e",
+      "name": "Banco preguntas",
+      "executeOnce": true,
+      "alwaysOutputData": false,
+      "retryOnFail": false,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DUMcbZS9dZVF1dEG",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "={{$items(\"Junta_rama\")[0].json.id_evaluacion}}_{{$items(\"Junta_rama\")[0].json.nombre_completo.replace(/\\s+/g, \"_\")}}.pdf",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1GJyrO9rFrTIt_xL85BcHIIvpt8uaiiZy",
+          "mode": "list",
+          "cachedResultName": "Infomers Evaluaciones",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1GJyrO9rFrTIt_xL85BcHIIvpt8uaiiZy"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1168,
+        96
+      ],
+      "id": "66471d9f-c125-42c2-81a0-17464804252e",
+      "name": "Guardar_PDF",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "Ek7wGo2To0eUwTPA",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const view = $json.webViewLink;\n\n// Extraer ID del archivo\nconst match = view.match(/\\/d\\/(.*?)\\//);\nconst fileId = match ? match[1] : null;\n\nreturn {\n  link_pdf: view,\n  link_descarga: `https://drive.google.com/uc?export=download&id=${fileId}`,\n  fileId\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1328,
+        96
+      ],
+      "id": "384f3b3c-becf-4e57-9847-89060850eff0",
+      "name": "Generar_link"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ================================\n// 1. Tomar datos desde Generar_link\n// ================================\nconst fileData = $items(\"Generar_link\")[0].json;\n\n// Asegurar que el fileId exista\nif (!fileData.fileId) {\n  throw new Error(\"No se encontró fileId desde Generar_link\");\n}\n\n// ================================\n// 2. Tomar datos desde config_eval\n// ================================\nconst configRows = $items(\"config_eval\");\n\n// Buscar doc asociado al id_evaluacion que viene desde Generar_link\nconst idEval = fileData.id_evaluacion;\n\nconst fila = configRows.find(r => r.json.id_evaluacion === idEval);\n\nif (!fila) {\n  throw new Error(`No se encontró la evaluación ${idEval} en Configuracion_evaluaciones`);\n}\n\nconst correoDocente = fila.json.correo_docente;\n\n// ================================\n// 3. Devolver combinación final\n// ================================\nreturn [\n  {\n    json: {\n      fileId: fileData.fileId,\n      docente_correo: correoDocente\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1824,
+        96
+      ],
+      "id": "bbec49c0-8bd1-4f12-9044-46c1f3dbf620",
+      "name": "autorizacion"
+    },
+    {
+      "parameters": {
+        "operation": "share",
+        "fileId": {
+          "__rl": true,
+          "value": "={{$json.fileId}}",
+          "mode": "id"
+        },
+        "permissionsUi": {
+          "permissionsValues": {
+            "role": "reader",
+            "type": "user",
+            "emailAddress": "={{ $('config_eval').item.json.corre_docente }}"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2000,
+        96
+      ],
+      "id": "6c0ff98e-2e1d-4c5a-9768-2ab95f4ad6b2",
+      "name": "compartir_archivo",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "Ek7wGo2To0eUwTPA",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "conversion",
+        "htmlContent": "={{ $json.pdfHtml }}",
+        "conversionOptions": {}
+      },
+      "type": "@pdfgeneratorapi/n8n-nodes-pdf-generator-api.pdfGeneratorApi",
+      "typeVersion": 1,
+      "position": [
+        752,
+        -96
+      ],
+      "id": "bc48d574-7f4e-4ab8-94aa-71b89c29ae65",
+      "name": "Generacion PDF",
+      "executeOnce": true,
+      "credentials": {
+        "pdfGeneratorApi": {
+          "id": "fXaHT5xik4pzYdLf",
+          "name": "PDF Generator account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 281602816,
+          "mode": "list",
+          "cachedResultName": "Configuracion_evaluaciones",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=281602816"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1504,
+        96
+      ],
+      "id": "008a6cdf-97a2-4bf7-9d0f-faffa9e0feee",
+      "name": "config_eval",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DUMcbZS9dZVF1dEG",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 111711668,
+          "mode": "list",
+          "cachedResultName": "Registro_Informes",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=111711668"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id_evaluacion": "={{ $items(\"Junta_rama\")[0].json.id_evaluacion }}",
+            "id_intento": "={{ $items(\"Junta_rama\")[0].json.id_intento }}\n",
+            "correo_estudiante": "={{ $items(\"Junta_rama\")[0].json.correo }}",
+            "nota_final": "={{ $items(\"Junta_rama\")[0].json.nota_final }}",
+            "link_descarga": "={{ $('Generar_link').item.json.link_descarga }}",
+            "fecha": "={{new Date().toISOString()}}",
+            "docente_asignado": "={{ $json.corre_docente }}",
+            "estado": "=\"OK\"",
+            "nombre_estudiante": "={{ $items(\"Junta_rama\")[0].json.nombre_completo }}",
+            "link_pdf": "={{ $('Generar_link').item.json.link_pdf }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "id_evaluacion",
+              "displayName": "id_evaluacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "id_intento",
+              "displayName": "id_intento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "correo_estudiante",
+              "displayName": "correo_estudiante",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "nombre_estudiante",
+              "displayName": "nombre_estudiante",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "nota_final",
+              "displayName": "nota_final",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "link_pdf",
+              "displayName": "link_pdf",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "link_descarga",
+              "displayName": "link_descarga",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "fecha",
+              "displayName": "fecha",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "docente_asignado",
+              "displayName": "docente_asignado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1648,
+        208
+      ],
+      "id": "3b637b11-9eb4-42e8-b0c0-93e57fac5829",
+      "name": "Guardar_links",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DUMcbZS9dZVF1dEG",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1174504737,
+          "mode": "list",
+          "cachedResultName": "Log_Entregas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=1174504737"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "id_intento",
+              "lookupValue": "={{ $json.body.id_intento }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.1,
+      "position": [
+        -4784,
+        -512
+      ],
+      "id": "1377a05e-4219-440b-807a-b091305f2951",
+      "name": "Verificar Duplicado",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DUMcbZS9dZVF1dEG",
+          "name": "Google Sheets account"
+        }
+      },
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.id_intento}}",
+              "value2": "={{ $('Webhook').item.json.body.id_intento }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -4624,
+        -512
+      ],
+      "id": "a9f4459d-98ca-4b2a-a6a5-c6b55de54fec",
+      "name": "¿Ya existe?"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Log_Entregas",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id_intento": "={{ $('Webhook').item.json.body.id_intento }}",
+            "id_evaluacion": "={{ $('Webhook').item.json.body.id_evaluacion }}",
+            "correo": "={{$('Webhook').item.json.body.correo || $('Webhook').item.json.body.email }}",
+            "fecha_recepcion": "={{ new Date().toISOString() }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "id_intento",
+              "displayName": "id_intento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "id_evaluacion",
+              "displayName": "id_evaluacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "correo",
+              "displayName": "correo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "fecha_recepcion",
+              "displayName": "fecha_recepcion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.1,
+      "position": [
+        -4432,
+        -496
+      ],
+      "id": "9ee7a89e-64eb-4a5a-9b6a-cd733523e737",
+      "name": "Registrar Recepción",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DUMcbZS9dZVF1dEG",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Webhook').item.json.body.correo || $('Webhook').item.json.body.email }}",
+        "subject": "=Recibido: Evaluación {{ $('Webhook').item.json.body.id_evaluacion }}",
+        "message": "=<p>Hola,</p>\n\n<p>Te confirmamos que tu evaluación ha sido recepcionada <b>exitosamente</b> por nuestro sistema.</p>\n\n<ul>\n    <li><b>ID de intento:</b> {{ $('Webhook').item.json.body.id_intento }}</li>\n  \n</ul>\n\n<p>No es necesario que respondas a este correo.</p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -4288,
+        -496
+      ],
+      "id": "178df5ec-1573-48c0-bfcd-dc19e33588a7",
+      "name": "Enviar Correo Notificación",
+      "webhookId": "01a2e318-4c65-448b-8ac4-7aa93ff1c735",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "0oHUy8LBbnmb6P4U",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 3
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -4160,
+        -496
+      ],
+      "id": "7512f531-8ae4-4f8a-b7be-95c82a94cf81",
+      "name": "Wait",
+      "webhookId": "40afa6b8-a5a2-4ca1-a3f6-55939e19b0c6"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1593002130,
+          "mode": "list",
+          "cachedResultName": "Autorizados",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=1593002130"
+        },
+        "options": {}
+      },
+      "id": "1da4a87a-0937-4145-8e04-7d95f7e1c345",
+      "name": "Leer_Autorizados",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -4448,
+        -208
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DUMcbZS9dZVF1dEG",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// SIEMPRE obtener el webhook (último item que entra)\nconst items = $input.all();\nconst entrada = items[items.length - 1].json;\n\n// Extraer correo correctamente\nconst email = String(\n  entrada.email ||\n  entrada.correo ||\n  entrada.body?.email ||\n  entrada.body?.correo ||\n  \"\"\n).trim().toLowerCase();\n\n// Token opcional\nconst token = String(\n  entrada.token ||\n  entrada.body?.token ||\n  \"\"\n).trim();\n\n// Registros del Google Sheet\nconst registros = $items(\"Leer_Autorizados\").map(i => i.json);\n\nlet autorizado = false;\nlet motivo = \"\";\nlet estudiante = null;\n\n// Validación\nfor (const row of registros) {\n  const rowEmail = String(row.email || \"\").trim().toLowerCase();\n  const rowToken = String(row.token || \"\").trim();\n  const activo = String(row.activo || \"\").trim().toLowerCase() === \"si\";\n\n  if (!activo) continue;\n\n  if (email === rowEmail || token === rowToken) {\n    autorizado = true;\n    estudiante = row;\n    break;\n  }\n}\n\nif (!autorizado) motivo = \"Credenciales inválidas\";\n\nreturn [{\n  json: {\n    autorizado,\n    motivo,\n    estudiante,\n    email_entrada: email,\n    ...entrada\n  }\n}];\n\n"
+      },
+      "id": "f7e37b98-ecbc-4ae0-b8e4-b833e51c0539",
+      "name": "Validar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3504,
+        -48
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "evaluaciones",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -5232,
+        -336
+      ],
+      "id": "2f14abcd-58e9-4dd8-a0e7-8e0f64edb5cf",
+      "name": "Webhook",
+      "webhookId": "8541f6ba-98e4-40a9-9ff5-91ae55ad6a9e"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Webhook').item.json.body.correo || $('Webhook').item.json.body.email }}",
+        "subject": "=Confirmación extendida de recepción – Evaluación {{ $('Registrar Recepción').item.json.id_evaluacion }}",
+        "message": "=Hola {{ $('Webhook').item.json.body.respuestas['Nombre Completo'][0] }},  Esta es una confirmación adicional de que tu evaluación  (ID de intento: {{ $('Webhook').item.json.body.id_intento }}) fue recibida correctamente en nuestro sistema.  Puedes conservar este mensaje como respaldo personal.  \n\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -4016,
+        -496
+      ],
+      "id": "001ec149-6ad5-491e-8e52-c0aa034960bc",
+      "name": "Confirmacion",
+      "webhookId": "0eabecbd-aa27-49f4-858e-c28554d66cfb",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "0oHUy8LBbnmb6P4U",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Webhook').item.json.body.email }}",
+        "subject": "= Error Crítico en Flujo HU-16: {{ $json.id_evaluacion || 'Desconocido' }}",
+        "message": "=<h3>Reporte de Error Automático</h3> <p>El sistema ha detectado un fallo al procesar una evaluación.</p>  <ul>      <li><strong>Nodo donde falló:</strong> {{ $json.error_node || 'Desconocido' }}</li>   <li><strong>Mensaje de Error:</strong> {{ $json.error_message || 'Sin detalles' }}</li> </ul>  <hr>  ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -4432,
+        -672
+      ],
+      "id": "4107891e-af3c-4c45-975e-19ac4134b45b",
+      "name": "Error",
+      "webhookId": "3f30b4fa-6747-4b30-aa18-f2b7659ea3f4",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "0oHUy8LBbnmb6P4U",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "5b6adbaa-8a5f-4dce-920a-7bef2e005a64",
+              "leftValue": "={{ $json.autorizado }}",
+              "rightValue": "false",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -3312,
+        -48
+      ],
+      "id": "e4f80c2f-9408-44fe-8de1-658167037e17",
+      "name": "IF_Autorizado"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1953818244,
+          "mode": "list",
+          "cachedResultName": "Desgloce_preguntas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=1953818244"
+        },
+        "options": {}
+      },
+      "id": "98b2bd62-6c81-4d50-8b89-fb83dd98ef86",
+      "name": "Leer_Desgloce_Preguntas",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1264,
+        528
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DUMcbZS9dZVF1dEG",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Entrada: viene desde 2 nodos de Google Sheets\nconst resumenItems = $items('Leer_Resumen_Preguntas') || [];\nconst desgloseItems = $items('Leer_Desgloce_Preguntas') || [];\n\n// Normalizar arrays de JSON\nconst resumen = resumenItems.map(i => i.json);\nconst desglose = desgloseItems.map(i => i.json);\n\n// ---------- Helpers ----------\nfunction parsePercent(v){\n  if (v === undefined || v === null || v === '') return null;\n  if (typeof v === 'number'){\n    if (v > 1 && v <= 100) return v/100;\n    return v;\n  }\n  let s = String(v).trim();\n  if (s.endsWith('%')) s = s.slice(0,-1).trim();\n  const n = Number(s.replace(',', '.'));\n  if (isNaN(n)) return null;\n  if (n > 1 && n <= 100) return n/100;\n  return n;\n}\n\nfunction median(arr){\n  if (!arr.length) return null;\n  const a = arr.slice().sort((x,y)=>x-y);\n  const mid = Math.floor(a.length/2);\n  return a.length%2 ? a[mid] : (a[mid-1]+a[mid])/2;\n}\n\n// ---------- Cálculo principal ----------\nconst estudiantes = resumen.map(r => ({\n  correo: r.correo || r.email || r.Correo || r.CORREO || r.email_estudiante || '',\n  id_intento: r.id_intento || r.id_intento || r.hash_intento || '',\n  nombre: r.nombre_completo || r.nombre || r.Nombre || '',\n  porcentaje_raw: parsePercent(r.porcentaje_aciertos)\n}));\n\nconst porcentajes = estudiantes.map(s => s.porcentaje_raw).filter(v => v !== null && v !== undefined);\nconst totalEst = estudiantes.length;\nconst validos = porcentajes.length;\nconst promedio = validos ? (porcentajes.reduce((a,b)=>a+b,0)/validos) : null;\nconst mediana = validos ? median(porcentajes) : null;\n\nconst distr = { '0-39':0,'40-59':0,'60-79':0,'80-100':0 };\nfor (const p of porcentajes){\n  const pct = p*100;\n  if (pct < 40) distr['0-39']++;\n  else if (pct < 60) distr['40-59']++;\n  else if (pct < 80) distr['60-79']++;\n  else distr['80-100']++;\n}\n\nconst incompletos = estudiantes.filter(s => s.porcentaje_raw === null).length;\n\nconst fallosPorPregunta = {};\nfor (const row of desglose){\n  const preg = row.pregunta || row.Pregunta || 'SIN_PREGUNTA';\n  const estado = (row.estado || '').toString().trim().toLowerCase();\n  if (estado && (estado === 'incorrecta' || estado === 'incorrecto' || estado === 'false' || estado === 'no')){\n    fallosPorPregunta[preg] = (fallosPorPregunta[preg] || 0) + 1;\n  }\n}\nconst preguntasOrdenadas = Object.entries(fallosPorPregunta).sort((a,b)=>b[1]-a[1]).map(([preg, fallos])=>({pregunta:preg, fallos}));\n\nconst topEst = estudiantes.filter(s=>s.porcentaje_raw!==null).sort((a,b)=>b.porcentaje_raw - a.porcentaje_raw).slice(0,10).map(s=>({correo:s.correo,nombre:s.nombre,porcentaje:(s.porcentaje_raw*100).toFixed(2)}));\n\nreturn [{\n  json: {\n    total_registros: resumen.length,\n    total_estudiantes: totalEst,\n    registros_incompletos: incompletos,\n    promedio_acierto: promedio===null? null : Number((promedio*100).toFixed(2)),\n    mediana_acierto: mediana===null? null : Number((mediana*100).toFixed(2)),\n    distribucion_segmentos: distr,\n    preguntas_mas_falladas: preguntasOrdenadas.slice(0,10),\n    top_estudiantes: topEst,\n    raw_estudiantes: estudiantes\n  }\n}];\n"
+      },
+      "id": "0d4927a8-fc38-448e-acd3-163a7f9cb405",
+      "name": "Calcular Estadísticas Agregadas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1776,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Genera un HTML con Chart.js embebido usando los datos del nodo anterior\nconst data = $input.first().json;\n\nconst promedio = data.promedio_acierto ?? 0;\nconst mediana = data.mediana_acierto ?? 0;\nconst distr = data.distribucion_segmentos || { '0-39':0,'40-59':0,'60-79':0,'80-100':0 };\nconst topPreg = data.preguntas_mas_falladas || [];\nconst topEst = data.top_estudiantes || [];\n\nconst html = `\n<!doctype html>\n<html>\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n  <title>Dashboard Evaluación</title>\n  <script src=\"https://cdn.jsdelivr.net/npm/chart.js\"></script>\n  <style>body{font-family:Arial,Helvetica,sans-serif;padding:20px;color:#333} .card{border:1px solid #e6e6e6;border-radius:8px;padding:12px;margin-bottom:12px}</style>\n</head>\n<body>\n  <h2>Dashboard — Estadísticas Agregadas</h2>\n  <div class=\"card\">\n    <strong>Promedio de acierto:</strong> ${promedio}% &nbsp; | &nbsp; <strong>Mediana:</strong> ${mediana}%\n  </div>\n\n  <div class=\"card\">\n    <canvas id=\"barPreg\" height=\"120\"></canvas>\n  </div>\n\n  <div class=\"card\">\n    <canvas id=\"pieDistrib\" height=\"120\"></canvas>\n  </div>\n\n  <div class=\"card\">\n    <h4>Top preguntas más falladas</h4>\n    <ol>\n      ${topPreg.slice(0,10).map(p => `<li>${p.pregunta} — ${p.fallos} fallos</li>`).join('')}\n    </ol>\n  </div>\n\n  <div class=\"card\">\n    <h4>Top estudiantes</h4>\n    <table border=\"0\" cellpadding=\"6\">\n      <thead><tr><th>Correo</th><th>Nombre</th><th>%</th></tr></thead>\n      <tbody>\n        ${topEst.map(e=>`<tr><td>${e.correo}</td><td>${e.nombre}</td><td>${e.porcentaje}</td></tr>`).join('')}\n      </tbody>\n    </table>\n  </div>\n\n<script>\n  const ctx = document.getElementById('barPreg').getContext('2d');\n  const labels = ${JSON.stringify(topPreg.slice(0,10).map(p=>p.pregunta))};\n  const vals = ${JSON.stringify(topPreg.slice(0,10).map(p=>p.fallos))};\n  new Chart(ctx, {type:'bar', data:{labels, datasets:[{label:'Fallos', data:vals}]}, options:{responsive:true}});\n\n  const ctx2 = document.getElementById('pieDistrib').getContext('2d');\n  const labels2 = ${JSON.stringify(Object.keys(distr))};\n  const vals2 = ${JSON.stringify(Object.values(distr))};\n  new Chart(ctx2, {type:'pie', data:{labels:labels2, datasets:[{data:vals2}]}, options:{responsive:true}});\n</script>\n</body>\n</html>\n`;\n\nreturn [{ json: { html, metrics: data } }];\n"
+      },
+      "id": "b5a7877e-2b3e-48c0-be8b-d7aad19a0f5d",
+      "name": "Generar Dashboard HTML",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2064,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const m = $input.first().json.metrics || {};\n\nfunction clean(text) {\n  if (text === null || text === undefined) return '';\n  return String(text).replace(/\"/g, '\"\"');\n}\n\nlet csvContent = \"\";\n\ncsvContent += \"RESUMEN GENERAL\\n\";\ncsvContent += \"Indicador,Valor\\n\";\ncsvContent += `\"Total Evaluaciones\",${m.total_registros || 0}\\n`;\ncsvContent += `\"Total Estudiantes\",${m.total_estudiantes || 0}\\n`;\ncsvContent += `\"Evaluaciones Incompletas\",${m.registros_incompletos || 0}\\n`;\ncsvContent += `\"Promedio Acierto (%)\",${m.promedio_acierto || 0}\\n`;\ncsvContent += `\"Mediana Acierto (%)\",${m.mediana_acierto || 0}\\n`;\n\ncsvContent += \"\\n\\n\";\n\ncsvContent += \"TOP PREGUNTAS CON MÁS ERRORES\\n\";\ncsvContent += \"#,Pregunta,Cantidad de Fallos\\n\";\n\nconst preguntas = (m.preguntas_mas_falladas || []).slice(0, 20);\n\nif (preguntas.length === 0) {\n    csvContent += \"No hay datos de preguntas falladas,,\\n\";\n} else {\n    preguntas.forEach((p, i) => {\n        csvContent += `${i + 1},\"${clean(p.pregunta)}\",${p.fallos}\\n`;\n    });\n}\n\ncsvContent += \"\\n\\n\";\n\ncsvContent += \"RENDIMIENTO POR ESTUDIANTE\\n\";\ncsvContent += \"#,Nombre,Correo,Porcentaje Acierto\\n\";\n\nconst estudiantes = (m.top_estudiantes || []).slice(0, 50);\n\nif (estudiantes.length === 0) {\n    csvContent += \"No hay datos de estudiantes,,\\n\";\n} else {\n    estudiantes.forEach((s, i) => {\n        csvContent += `${i + 1},\"${clean(s.nombre)}\",${clean(s.correo)},\"${s.porcentaje}%\"\\n`;\n    });\n}\n\nconst finalString = '\\uFEFF' + csvContent;\n\nconst b64 = Buffer.from(finalString, 'utf8').toString('base64');\n\nreturn [{\n    json: {\n        fileName: 'Reporte_Estadisticas.csv'\n    },\n    binary: {\n        data: {\n            data: b64,\n            mimeType: 'text/csv',\n            fileName: 'Reporte_Estadisticas.csv'\n        }\n    }\n}];"
+      },
+      "id": "70e92cd5-ec4c-4677-a576-4af685625874",
+      "name": "Generar CSV Métricas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2592,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 688664164,
+          "mode": "list",
+          "cachedResultName": "Resumen_Preguntas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=688664164"
+        },
+        "options": {}
+      },
+      "id": "9494aadd-1ae5-4c8e-b77a-c064c817beae",
+      "name": "Leer_Resumen_Preguntas",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1248,
+        368
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DUMcbZS9dZVF1dEG",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -1312,
+        -192
+      ],
+      "id": "f4510193-c538-49a1-a5e7-00e4ddefe44d",
+      "name": "merge-Comparador"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1472,
+        432
+      ],
+      "id": "9ba98268-9ddb-444c-bb53-c473dbd71231",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY",
+          "mode": "list",
+          "cachedResultName": "base de conocimiento",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1388339891,
+          "mode": "list",
+          "cachedResultName": "ID_Estudiantes",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UCQdb7vu7A-9XXPEWtH8fakIiiaTlCagmEY3RGXDunY/edit#gid=1388339891"
+        },
+        "columnToMatchOn": "ID",
+        "valueToMatchOn": "={{ $json.id_intento }}",
+        "fieldsUi": {
+          "values": [
+            {
+              "column": "Correo",
+              "fieldValue": "={{ $json.correo }}"
+            },
+            {
+              "column": "Nombre",
+              "fieldValue": "={{ $json.nombre_completo }}"
+            },
+            {
+              "column": "Nota Final",
+              "fieldValue": "={{ $json.nota_final }}"
+            },
+            {
+              "column": "Total_Preguntas",
+              "fieldValue": "={{ $json.total_preguntas }}"
+            },
+            {
+              "column": "Total_Correctas",
+              "fieldValue": "={{ $json.respuestas_correctas }}"
+            },
+            {
+              "column": "Preguntas_Incorrectas",
+              "fieldValue": "={{ $('Calcular Nota').item.json.total_preguntas - $('Calcular Nota').item.json.respuestas_correctas }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1b5674ab-a964-46ec-a86a-e6229b11e2b4",
+      "name": "update_Resumen",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 3,
+      "position": [
+        -336,
+        -240
+      ],
+      "executeOnce": false,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DUMcbZS9dZVF1dEG",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "generar-reporte-docente",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        928,
+        464
+      ],
+      "id": "d7e9dcfe-8afe-4fea-9714-1f9abfe6831b",
+      "name": "Webhook1",
+      "webhookId": "47f0c455-6bb6-4b29-84c5-0aa404e24179"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtenemos los datos del nodo anterior\nconst items = $input.all();\n\n// Recorremos los items (usualmente es solo 1)\nfor (const item of items) {\n  // Obtenemos el texto Base64 del PDF\n  const base64String = item.json.response;\n\n  // Creamos la estructura binaria que n8n necesita para los archivos\n  item.binary = {\n    data: {\n      data: base64String,\n      mimeType: 'application/pdf',\n      fileName: 'Resumen(Dasboard)' \n    }\n  };\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2768,
+        272
+      ],
+      "id": "d236bd82-5fa8-4659-a883-82965c1e5540",
+      "name": "Code in JavaScript",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtenemos los datos del nodo anterior\nconst items = $input.all();\n\n// Recorremos los items (usualmente es solo 1)\nfor (const item of items) {\n  // Obtenemos el texto Base64 del PDF\n  const base64String = item.json.response;\n\n  // Creamos la estructura binaria que n8n necesita para los archivos\n  item.binary = {\n    data: {\n      data: base64String,\n      mimeType: 'application/pdf',\n      fileName: 'Feedback_Evaluacion.pdf' \n    }\n  };\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        992,
+        -96
+      ],
+      "id": "f4c73dd4-999f-4791-bead-fc320c6fd037",
+      "name": "estructura binaria",
+      "executeOnce": true
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3008,
+        432
+      ],
+      "id": "ada86893-c7c0-4e13-8839-e1415d0c1010",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $json;\n\nconst salida = {\n  json: item,\n  binary: {}\n};\n\n// Convertir CSV a binario si existe\nif (item.csv?.base64) {\n  salida.binary.csv = {\n    data: item.csv.base64,\n    mimeType: item.csv.mimeType || \"text/csv\",\n    fileName: item.csv.filename || \"reporte.csv\"\n  };\n}\n\n// Convertir PDF a binario si existe\nif (item.pdf?.base64) {\n  // Evitar nombres con \"/\"\n  const safeName = (item.pdf.filename || \"dashboard.pdf\").replace(/\\//g, \"_\");\n\n  salida.binary.pdf = {\n    data: item.pdf.base64,\n    mimeType: item.pdf.mimeType || \"application/pdf\",\n    fileName: safeName\n  };\n}\n\nreturn [salida];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3472,
+        432
+      ],
+      "id": "08d0ba03-ca2a-4552-8c80-40466fcb9488",
+      "name": "Preparacion correo"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtenemos todos los items que entran al nodo (desde el Merge)\nconst items = $input.all();\n\n// Inicializamos las variables de salida\nlet html = null;\nlet metrics = null;\nlet csv = null;\nlet pdf = null;\n\n// Recorremos todos los items recibidos\nfor (const item of items) {\n\n    // 1. Recuperar Datos JSON (HTML y Métricas)\n    if (item.json.html) html = item.json.html;\n    if (item.json.metrics) metrics = item.json.metrics;\n\n    // 2. Recuperar Archivos Binarios (PDF y CSV)\n    if (item.binary) {\n        for (const key of Object.keys(item.binary)) {\n            const file = item.binary[key];\n\n            // CSV detectado\n            if (file.mimeType === \"text/csv\") {\n                csv = {\n                    filename: file.fileName || \"reporte.csv\",\n                    mimeType: file.mimeType,\n                    base64: file.data\n                };\n            }\n\n            // PDF detectado\n            if (file.mimeType === \"application/pdf\") {\n                pdf = {\n                    filename: file.fileName || \"dashboard.pdf\",\n                    mimeType: file.mimeType,\n                    base64: file.data\n                };\n            }\n        }\n    }\n}\n\n// Retornamos un único objeto consolidado\nreturn [{\n    json: {\n        metrics: metrics || {},\n        html: html || null,\n        csv: csv || null,\n        pdf: pdf || null\n    }\n}];\n\n"
+      },
+      "id": "d32c76bb-e441-4bae-8eb0-3583b871dbee",
+      "name": "Unificar_Respuesta_Dashboard",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3264,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "espejoacademicounab@gmail.com",
+        "subject": "Reporte Dashborad",
+        "message": "Reporte de resumen de curso, se adjunta archivo csv y archivo PDF con grafico",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {
+                "property": "=csv"
+              },
+              {
+                "property": "=pdf"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        3696,
+        416
+      ],
+      "id": "34030dea-0d69-4250-8d17-300e31bf307d",
+      "name": "Correo_dasboard",
+      "webhookId": "42c2c1b0-003e-4ea8-9db1-b642e8f32991",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "0oHUy8LBbnmb6P4U",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtener las métricas que vienen del nodo anterior\nconst metrics = $input.first().json.metrics || {};\nconst preguntas = metrics.preguntas_mas_falladas || [];\n\n// Preparar datos para el gráfico automáticamente\n// Cortamos los textos muy largos para que el gráfico no se rompa\nconst labels = preguntas.map(p => {\n    const texto = p.pregunta || \"Pregunta\";\n    return texto.length > 20 ? texto.substring(0, 20) + \"...\" : texto;\n});\nconst values = preguntas.map(p => p.fallos || 0);\n\n// Configuración de Chart.js\nconst chartConfig = {\n  type: 'bar',\n  data: {\n    labels: labels,\n    datasets: [{\n      label: 'Cantidad de Fallos',\n      backgroundColor: 'rgba(54, 162, 235, 0.8)',\n      borderColor: 'rgba(54, 162, 235, 1)',\n      borderWidth: 1,\n      data: values,\n    }]\n  },\n  options: {\n    plugins: {\n      legend: { display: false }, // Ocultamos leyenda para limpiar\n      title: { display: true, text: 'Top Errores' }\n    },\n    scales: {\n      y: { beginAtZero: true, ticks: { stepSize: 1 } },\n      x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 45, font: { size: 10 } } }\n    }\n  }\n};\n\n// Generar URL\nconst encoded = encodeURIComponent(JSON.stringify(chartConfig));\nconst chartUrl = `https://quickchart.io/chart?width=800&height=400&c=${encoded}`;\n\n// Pasamos TODO al siguiente nodo (métricas originales + url del gráfico)\nreturn [{\n  json: {\n    metrics: metrics,\n    chart_url: chartUrl\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2320,
+        272
+      ],
+      "id": "5367d1bc-d209-40be-971f-3764924b116e",
+      "name": "Generar URL Gráfico"
+    },
+    {
+      "parameters": {
+        "resource": "conversion",
+        "htmlContent": "=<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"UTF-8\">\n<title>Informe Evaluación — Dashboard</title>\n\n<style>\n    body {\n        font-family: \"Helvetica Neue\", Arial, sans-serif;\n        margin: 40px;\n        background: #f5f6fa;\n        color: #333;\n    }\n\n    h1 {\n        text-align: center;\n        font-size: 28px;\n        margin-bottom: 5px;\n    }\n\n    h2 {\n        margin-top: 40px;\n        font-size: 22px;\n        border-bottom: 2px solid #4a90e2;\n        padding-bottom: 4px;\n        color: #2c3e50;\n    }\n\n    .card {\n        background: white;\n        border-radius: 10px;\n        padding: 20px;\n        margin-bottom: 25px;\n        box-shadow: 0 2px 6px rgba(0,0,0,0.08);\n    }\n\n    .metric-box {\n        display: flex;\n        justify-content: space-between;\n        margin-bottom: 18px;\n        font-size: 18px;\n    }\n\n    .metric-label {\n        font-weight: bold;\n        color: #555;\n    }\n\n    .metric-value {\n        color: #2c3e50;\n    }\n\n    .chart-container {\n        text-align: center;\n        margin: 30px 0;\n    }\n\n    .chart-container img {\n        width: 900px;\n        border-radius: 8px;\n        box-shadow: 0 2px 6px rgba(0,0,0,0.15);\n    }\n\n    table {\n        width: 100%;\n        border-collapse: collapse;\n        margin-top: 15px;\n    }\n\n    table thead {\n        background: #4a90e2;\n        color: white;\n    }\n\n    table th, table td {\n        padding: 10px;\n        border: 1px solid #ddd;\n        font-size: 15px;\n    }\n\n    .footer {\n        margin-top: 40px;\n        font-size: 13px;\n        text-align: center;\n        color: #777;\n    }\n</style>\n</head>\n\n<body>\n\n<h1>Informe — Evaluación Académica</h1>\n\n<div class=\"card\">\n    <div class=\"metric-box\">\n        <span class=\"metric-label\">Promedio de acierto:</span>\n        <span class=\"metric-value\">{{ $json.metrics.promedio_acierto }}%</span>\n    </div>\n\n    <div class=\"metric-box\">\n        <span class=\"metric-label\">Mediana de acierto:</span>\n        <span class=\"metric-value\">{{ $json.metrics.mediana_acierto }}%</span>\n    </div>\n\n    <div class=\"metric-box\">\n        <span class=\"metric-label\">Total estudiantes:</span>\n        <span class=\"metric-value\">{{ $json.metrics.total_estudiantes }}</span>\n    </div>\n</div>\n\n<h2>Gráfico de Fallos por Pregunta</h2>\n<div class=\"card chart-container\">\n    <img src=\"{{ $json.chart_url }}\" alt=\"Gráfico de Fallos\">\n</div>\n\n<h2>Preguntas Más Falladas</h2>\n<div class=\"card\">\n    <table>\n        <thead>\n            <tr>\n                <th>Pregunta</th>\n                <th>Fallos</th>\n            </tr>\n        </thead>\n        <tbody>\n            {{ \n              $json.metrics.preguntas_mas_falladas\n                .map(p => `<tr>\n                  <td>${p.pregunta}</td>\n                  <td style=\"text-align:center;\">${p.fallos}</td>\n                </tr>`)\n                .join(\"\")\n            }}\n        </tbody>\n    </table>\n</div>\n\n<h2>Resumen General</h2>\n<div class=\"card\">\n    <p>\n        El presente informe muestra un análisis general del desempeño de los estudiantes en la evaluación aplicada.\n        El promedio general indica un rendimiento de <strong>{{ $json.metrics.promedio_acierto }}%</strong>, \n        con una mediana del <strong>{{ $json.metrics.mediana_acierto }}%</strong>.\n        <br><br>\n        Se identificaron áreas de dificultad, reflejadas en las preguntas con mayor cantidad de fallos. \n        Esta información permitirá reforzar los contenidos necesarios y optimizar los procesos de enseñanza.\n    </p>\n</div>\n\n<div class=\"footer\">\n    Informe generado automáticamente por el Sistema de Evaluaciones — {{ new Date().toLocaleDateString(\"es-CL\") }}\n</div>\n\n</body>\n</html>\n",
+        "conversionOptions": {}
+      },
+      "id": "4870f5f6-4b5f-4410-a7b0-1101414734eb",
+      "name": "Generar PDF Dashboard",
+      "type": "@pdfgeneratorapi/n8n-nodes-pdf-generator-api.pdfGeneratorApi",
+      "typeVersion": 1,
+      "position": [
+        2544,
+        272
+      ],
+      "credentials": {
+        "pdfGeneratorApi": {
+          "id": "fXaHT5xik4pzYdLf",
+          "name": "PDF Generator account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email_entrada }}",
+        "subject": "=Acceso Denegado",
+        "message": "Se le denego el acceso a la prueba, Consulte con su profesor o administrador para revisar su situacion.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -3040,
+        -224
+      ],
+      "id": "c8d47528-0e5b-48a9-ab8a-a7c559c68966",
+      "name": "Send a message",
+      "webhookId": "7f458641-dfc0-4287-8741-a008dfe2694f",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "0oHUy8LBbnmb6P4U",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -4160,
+        -96
+      ],
+      "id": "cab618c5-94f8-4601-bfaf-cddc7be365cc",
+      "name": "Merge2"
+    }
+  ],
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "dropsically-suborbiculated-kaiya.ngrok-free.dev",
+            "user-agent": "Mozilla/5.0 (compatible; Google-Apps-Script; beanserver; +https://script.google.com; id: UAEmdDd_HRbe-i-Ww7AaKwBSp984b3G2ovQ)",
+            "content-length": "1012",
+            "accept-encoding": "gzip, deflate, br",
+            "content-type": "application/json",
+            "x-forwarded-for": "34.116.22.76",
+            "x-forwarded-host": "dropsically-suborbiculated-kaiya.ngrok-free.dev",
+            "x-forwarded-proto": "https"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "id_evaluacion": "Final2",
+            "id_intento": "Final2_20251212_002338",
+            "form_id": "1rvF59AhQz6Q44vzr85QTxH54KF513qlfQ2rEmlYwofg",
+            "nombre_form": "Final2",
+            "email": "nicoms5477@gmail.com",
+            "nombre_completo": "nicolas",
+            "respuestas": {
+              "Nombre Completo": [
+                "nicolas"
+              ],
+              "¿Qué evento marca el inicio del período conocido como la 'Patria Vieja' en la historia de Chile?": [
+                "La Primera Junta Nacional de Gobierno."
+              ],
+              "La derrota de las fuerzas patriotas en la Batalla de Rancagua en 1814 tuvo como consecuencia directa": [
+                "El fin de la Patria Vieja y el comienzo de la Reconquista española."
+              ],
+              "¿Cuál de los siguientes hitos ocurrió durante el gobierno de Bernardo O'Higgins como Director Supremo (1817-1823)?": [
+                "La promulgación del Reglamento Constitucional de 1812."
+              ],
+              "¿Cuál fue el principal argumento utilizado por los criollos para formar la Primera Junta Nacional de Gobierno en Chile el 18 de septiembre de 1810?": [
+                "Declarar la independencia inmediata y total de la Corona Española."
+              ]
+            },
+            "timestamp": "2025-12-12T03:23:38.274Z"
+          },
+          "webhookUrl": "http://localhost:5678/webhook/evaluaciones",
+          "executionMode": "production"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Junta_rama": {
+      "main": [
+        [
+          {
+            "node": "mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "mensaje": {
+      "main": [
+        [
+          {
+            "node": "Generacion PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "comparador": {
+      "main": [
+        [
+          {
+            "node": "Calcular Nota",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Desgloce",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular Nota": {
+      "main": [
+        [
+          {
+            "node": "Update_Resumen notas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update_Resumen notas": {
+      "main": [
+        [
+          {
+            "node": "update_Resumen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizador_respuestas": {
+      "main": [
+        [
+          {
+            "node": "Banco preguntas",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "merge-Comparador",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Desgloce": {
+      "main": [
+        [
+          {
+            "node": "separador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "separador": {
+      "main": [
+        [
+          {
+            "node": "Update_Explicacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save_Entrada_Bruta": {
+      "main": [
+        [
+          {
+            "node": "Normalizador_JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizador_JSON": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Guardado_Temporal",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error_JSON_Entrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardado_Temporal": {
+      "main": [
+        [
+          {
+            "node": "Normalizador_respuestas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RetroAlimentacion_Estudiante": {
+      "main": [
+        [
+          {
+            "node": "Error al enviar correo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "resumen_notas": {
+      "main": [
+        [
+          {
+            "node": "Junta_rama",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "logs_errores_correo": {
+      "main": [
+        [
+          {
+            "node": "Alerta_Admin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error al enviar correo": {
+      "main": [
+        [
+          {
+            "node": "logs_errores_correo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "crypto": {
+      "main": [
+        [
+          {
+            "node": "Leer_Autorizados",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "construccion_payload": {
+      "main": [
+        [
+          {
+            "node": "Save_Entrada_Bruta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Banco preguntas": {
+      "main": [
+        [
+          {
+            "node": "merge-Comparador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar_PDF": {
+      "main": [
+        [
+          {
+            "node": "Generar_link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar_link": {
+      "main": [
+        [
+          {
+            "node": "config_eval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "autorizacion": {
+      "main": [
+        [
+          {
+            "node": "compartir_archivo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generacion PDF": {
+      "main": [
+        [
+          {
+            "node": "estructura binaria",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "config_eval": {
+      "main": [
+        [
+          {
+            "node": "autorizacion",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Guardar_links",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar_links": {
+      "main": [
+        []
+      ]
+    },
+    "Update_Explicacion": {
+      "main": [
+        [
+          {
+            "node": "Junta_rama",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Verificar Duplicado": {
+      "main": [
+        [
+          {
+            "node": "¿Ya existe?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Ya existe?": {
+      "main": [
+        [
+          {
+            "node": "Error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Registrar Recepción",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Recepción": {
+      "main": [
+        [
+          {
+            "node": "Enviar Correo Notificación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Correo Notificación": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Confirmacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer_Autorizados": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar": {
+      "main": [
+        [
+          {
+            "node": "IF_Autorizado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Verificar Duplicado",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "crypto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_Autorizado": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "construccion_payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer_Desgloce_Preguntas": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Calcular Estadísticas Agregadas": {
+      "main": [
+        [
+          {
+            "node": "Generar Dashboard HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar Dashboard HTML": {
+      "main": [
+        [
+          {
+            "node": "Generar CSV Métricas",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Generar URL Gráfico",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer_Resumen_Preguntas": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "merge-Comparador": {
+      "main": [
+        [
+          {
+            "node": "comparador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar CSV Métricas": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Calcular Estadísticas Agregadas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "update_Resumen": {
+      "main": [
+        [
+          {
+            "node": "resumen_notas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook1": {
+      "main": [
+        [
+          {
+            "node": "Leer_Resumen_Preguntas",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Leer_Desgloce_Preguntas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "estructura binaria": {
+      "main": [
+        [
+          {
+            "node": "RetroAlimentacion_Estudiante",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Guardar_PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Unificar_Respuesta_Dashboard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparacion correo": {
+      "main": [
+        [
+          {
+            "node": "Correo_dasboard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unificar_Respuesta_Dashboard": {
+      "main": [
+        [
+          {
+            "node": "Preparacion correo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar URL Gráfico": {
+      "main": [
+        [
+          {
+            "node": "Generar PDF Dashboard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar PDF Dashboard": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Correo_dasboard": {
+      "main": [
+        []
+      ]
+    },
+    "Merge2": {
+      "main": [
+        [
+          {
+            "node": "Validar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "25cd47e9-8619-4864-8d08-f2077df05868",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4aeceeb0ba3e3e9e6c551ba9527c1c0b22c05bf10cb9234bca508832686c27cf"
+  },
+  "id": "OxNWW9qDZpZ97WfO",
+  "tags": []
+}
