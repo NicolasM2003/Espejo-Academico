@@ -1,4 +1,4 @@
-[readme_manual_de_instalacion_y_despliegue_actualizado.md](https://github.com/user-attachments/files/24173974/readme_manual_de_instalacion_y_despliegue_actualizado.md)
+[readme_manual_de_instalacion_y_despliegue_actualizado (1).md](https://github.com/user-attachments/files/24174012/readme_manual_de_instalacion_y_despliegue_actualizado.1.md)
 # 📘 Manual de Despliegue y Arquitectura del Sistema de Evaluaciones Automatizadas
 
 Este documento describe en profundidad la **arquitectura técnica**, el **modelo de datos**, los **flujos de automatización** y los **procedimientos de despliegue** del Sistema de Evaluaciones Automatizadas. El sistema fue desarrollado inicialmente en un entorno local y posteriormente desplegado en una **Máquina Virtual Universitaria**, integrando Google Sheets, Google Forms, Google Apps Script y n8n autoalojado.
@@ -19,45 +19,120 @@ Esta separación permite escalabilidad, trazabilidad y control total del proceso
 
 ---
 
-## 🔐 2. Gestión de Credenciales y Accesos
+## 🔐 2. Requisitos y Credenciales (completar por el administrador)
 
-El sistema opera con validaciones en múltiples niveles para asegurar la integridad de los datos.
+Este apartado describe los requisitos previos y las credenciales necesarias para la correcta operación del sistema.
 
-### 2.1 Credenciales de Servicios (Aplicación)
+### 📦 2.1 Requisitos del Sistema
 
-Utilizadas por los flujos de n8n:
+- **Docker Desktop** (para ejecución local en Windows)
+- **Ngrok** (exposición HTTPS del webhook)
+- **Credenciales OAuth necesarias para n8n:**
+  - Google Sheets OAuth API
+  - Gmail OAuth
+- **PDF Generator API** (Convert HTML to PDF)
 
-- **Google Cloud Platform (OAuth 2.0)**
-  - Acceso a Google Sheets
-  - Acceso a Google Drive
-  - Acceso a Gmail
+### 🔑 2.2 Credenciales Necesarias
 
-- **PDF Generator API**
-  - Conversión de contenido HTML a PDF
+Las credenciales deben ser solicitadas a un desarrollador/administrador del proyecto, ya que contienen accesos a:
+- Google Cloud (OAuth Client ID/Secret)
+- Gmail (OAuth/SMTP)
+- API externa de conversión PDF
 
-- **Servicio de Correo**
-  - OAuth Gmail o SMTP para notificaciones automáticas
-
-> Estas credenciales se configuran directamente en el gestor de credenciales de n8n.
-
----
-
-### 2.2 Credenciales de Infraestructura (Universidad)
-
-Utilizadas para el despliegue institucional:
-
-- **Acceso VPN UNAV**
-  - Usuario genérico: `alumno`
-  - Contraseña genérica: `UNAV.1025`
-
-- **Acceso Personal**
-  - Usuario y contraseña de Intranet UNAV
-
-> ⚠️ *Las credenciales reales pueden ser anonimizadas en versiones públicas del repositorio.*
+> ⚠️ **Nota:** Para repositorios públicos o entregas académicas, se recomienda reemplazar secretos por variables de entorno y/o anonimizar valores sensibles.
 
 ---
 
-## 🗂 3. Modelo de Datos – Google Sheets
+## ⭐ 3. Instalación y Configuración de Scripts
+
+Este proceso consta de 3 partes: instalación de **Docker Desktop**, configuración de **Ngrok** y configuración de **Apps Script**. Los pasos están enumerados de forma continua para asegurar que el proceso sea claro y fácil de seguir.
+
+### 🐳 3.1) Instalación de Docker Desktop
+
+Descargar Docker Desktop:
+- https://www.docker.com
+
+### ▶️ 3.2) Levantar n8n con Docker (Local)
+
+Ejecutar en terminal:
+
+```bash
+docker run -d --name n8n -p 5678:5678 -v n8n_data:/home/node/.n8n docker.n8n.io/n8nio/n8n
+```
+
+Acceder en navegador:
+- http://localhost:5678
+
+### 🌐 3.3) Instalación y configuración de Ngrok
+
+1. Descargar Ngrok:
+   - https://ngrok.com/download/windows?tab=download
+2. Extraer el archivo
+3. Abrir una terminal donde se encuentre `ngrok.exe`
+4. Crear una cuenta en Ngrok
+5. Copiar el **Authtoken**
+6. Ejecutar:
+
+```bash
+ngrok config add-authtoken <TOKEN>
+```
+
+#### ➤ Iniciar Ngrok
+
+```bash
+ngrok http 5678
+```
+
+Ngrok generará una URL como:
+- `https://xxxxx.ngrok-free.dev`
+
+⚠️ **IMPORTANTE:**
+- **NO cerrar** la consola donde corre Ngrok mientras se realizan pruebas.
+
+### ✏️ 3.4) Configurar Apps Script en Google Sheets
+
+1. Abrir la hoja base de conocimiento (Google Sheets)
+2. Ir a **Extensiones → Apps Script**
+
+### 3.5) Cambiar la URL de Ngrok en Apps Script
+
+En el archivo `Code.gs`, actualizar el webhook según el túnel vigente.
+
+**Línea 6:**
+
+```js
+const N8N_WEBHOOK_URL = 'https://NUEVO-LINK.ngrok-free.dev/webhook/evaluaciones';
+```
+
+**Línea 324 (Fetch):**
+
+```js
+const response = UrlFetchApp.fetch('https://NUEVO-LINK.ngrok-free.dev/webhook/evaluaciones', options);
+```
+
+### 💾 3.6) Guardar y ejecutar
+
+- Presionar **Ctrl + S**
+- Clic en **▶ Ejecutar**
+
+---
+
+## 📬 4. Flujo desde Google Sheets hasta el correo final (Docente)
+
+1. Abrir hoja `Configuracion_evaluaciones`
+2. Completar `id_evaluacion` y `nombre_formulario`
+3. Ir a hoja `Banco_Preguntas`
+4. Marcar columna `Seleccionar` en las preguntas deseadas
+5. Menú: **Evaluaciones → Crear formulario desde selección**
+6. Esperar la generación automática de 2 links:
+   - Link de edición
+   - Link para estudiantes
+7. Verificar que `Configuracion_evaluaciones` se actualice automáticamente con los links
+8. Usar **Evaluaciones → Renombrar y mover hoja** (cuando aplique)
+
+---
+
+## 🗂 5. Modelo de Datos – Google Sheets
 
 Google Sheets funciona como la **base de datos principal**, estructurada en múltiples hojas especializadas:
 
@@ -116,56 +191,115 @@ Google Sheets funciona como la **base de datos principal**, estructurada en múl
 
 ---
 
-## 🔁 4. Arquitectura de Flujos en n8n
+## 🔁 6. Flujo Completo del Sistema de Evaluaciones (Google Sheets → n8n → PDF → Gmail)
 
-El sistema evolucionó desde un flujo monolítico a una **arquitectura lógica por flujos**, equivalente a micro‑servicios.
+A continuación se detalla paso a paso cómo funciona el flujo completo dentro de **n8n**, desde que llegan las respuestas del formulario hasta el envío final del correo con el PDF adjunto.
 
-### 4.1 Flujo Backend – Evaluación y Retroalimentación
+### Paso 1: WebHook – Recepción de datos desde Google Forms
+**Nodo:** Webhook
 
-**Responsabilidad:** Procesar evaluaciones individuales.
+- El flujo comienza con un trigger Webhook conectado al formulario generado.
+- Cada vez que un estudiante responde el formulario, las respuestas llegan inmediatamente a este nodo.
 
-**Etapas:**
-1. Recepción Webhook (Google Forms)
-2. Validación de correo autorizado
-3. Control de duplicidad de intentos
-4. Normalización de respuestas
-5. Consulta al Banco de Preguntas
-6. Comparación y corrección
-7. Registro por pregunta
-8. Cálculo de nota
-9. Generación HTML
-10. Conversión a PDF
-11. Almacenamiento en Drive
-12. Envío de correo
-13. Registro final
+### Paso 2: Code – Normalizar Respuestas
+**Nodo:** Normalizar_Respuestas (Code)
+
+- Procesa las respuestas crudas recibidas desde Google Forms.
+- Separa preguntas y respuestas, limpia caracteres y estandariza textos para permitir la comparación posterior.
+
+### Paso 3: Leer banco de preguntas desde Google Sheets
+**Nodo:** Banco_Preguntas
+
+- Obtiene las preguntas desde la base de conocimiento.
+- Lee pregunta, alternativas, respuesta correcta y explicación asociada.
+
+### Paso 4: Comparar – Determinar la calificación
+**Nodo:** Comparador
+
+- Normaliza el texto (mayúsculas/minúsculas, espacios, símbolos).
+- Busca la pregunta del estudiante dentro del banco de preguntas.
+- Compara la `respuesta_usuario` con la `respuesta_correcta`.
+- Determina el estado: **Correcta** o **Incorrecta**.
+- Si es incorrecta, adjunta la explicación correspondiente.
+
+### Paso 5: Desglose – Generación de ID único por pregunta
+**Nodo:** Desglose
+
+- Crea un identificador único (`id_detalle`) combinando:
+  - `id_intento + número_de_pregunta`
+- Ejemplo: `Probando_2025_1`.
+
+### Paso 6: Guardar resultados por pregunta
+**Nodo:** Update_Desglose
+
+- Registra cada pregunta evaluada en la hoja `Desglose_Preguntas`, incluyendo:
+  - `estado`
+  - `explicación`
+  - `id_detalle`
+  - `id_intento`
+  - `pregunta` y `respuesta`
+
+### Paso 7: Calcular nota del intento
+**Nodo:** Calcular Nota
+
+- Agrupa todas las preguntas del mismo intento y calcula:
+  - `total_preguntas`
+  - `respuestas_correctas`
+  - `porcentaje_aciertos`
+  - `nota_final`
+
+### Paso 8: Guardar resumen del usuario
+**Nodo:** Update_Resumen_Notas
+
+- Guarda en la hoja `Resumen_Usuario`:
+  - `correo`
+  - `nota`
+  - `porcentaje`
+  - `fecha`
+  - `id_intento`
+
+### Paso 9: Leer datos nuevamente desde Sheets
+**Nodo:** Read_Desglose
+
+- Lee nuevamente los datos del desglose para construir el PDF.
+
+### Paso 10: Separar – Limpieza de explicaciones
+**Nodo:** Separador
+
+- Si la respuesta es **Correcta**, se elimina la explicación.
+- Si es **Incorrecta**, la explicación se mantiene.
+
+### Paso 11: Merge – Unificación del desglose + resumen
+**Nodo:** Merge
+
+- Combina todas las preguntas evaluadas con el resumen del intento (nota final y porcentaje).
+
+### Paso 12: Editar mensaje – Construcción del HTML del PDF
+**Nodo:** Edit_Mensaje
+
+- Genera un HTML con:
+  - Nota final y porcentaje
+  - Lista de preguntas
+  - Estado Correcta/Incorrecta
+  - Explicación para incorrectas
+
+### Paso 13: Convertir HTML a PDF
+**Nodo:** Convert HTML Content to PDF
+
+- Envía el HTML a un servicio de conversión.
+- Recibe el PDF codificado en **base64**, listo para enviarse por correo.
+
+### Paso 14: Enviar correo con el PDF adjunto
+**Nodo:** Send a message2 (Gmail)
+
+- Envía al estudiante:
+  - Asunto personalizado
+  - Mensaje de retroalimentación
+  - PDF adjunto con el análisis completo de su evaluación
 
 ---
 
-### 4.2 Flujo Dashboard y Métricas
-
-**Responsabilidad:** Generar estadísticas globales.
-
-- Consolidación de resultados
-- Cálculo de métricas
-- Generación de reportes CSV/PDF
-- Envío a docentes
-
----
-
-### 4.3 Flujo Frontend Dinámico
-
-**Responsabilidad:** Publicar evaluaciones activas.
-
-- Consulta evaluaciones con estado **Activo = Sí**
-- Retorno de JSON con:
-  - Nombre evaluación
-  - Docente
-  - Cantidad de preguntas
-  - Link de acceso
-
----
-
-## 🌍 5. Despliegue en Producción (Máquina Virtual Universitaria)
+## 🌍 7. Despliegue en Producción (Máquina Virtual Universitaria)
 
 ### 5.1 Entorno
 
