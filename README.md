@@ -1,5 +1,5 @@
 
-# 📘 Manual de Despliegue y Arquitectura del Sistema de Evaluaciones Automatizadas
+# Manual de Despliegue y Arquitectura del Sistema de Evaluaciones Automatizadas
 
 Este documento describe en profundidad la **arquitectura técnica**, el **modelo de datos**, los **flujos de automatización** y el **proceso completo de despliegue** del Sistema de Evaluaciones Automatizadas.
 
@@ -7,7 +7,7 @@ El sistema fue desarrollado inicialmente en un **entorno local** y posteriorment
 
 ---
 
-## 🧠 1. Visión General de la Arquitectura
+## 1. Visión General de la Arquitectura
 
 El sistema adopta una arquitectura **desacoplada y orientada a flujos**, donde cada componente cumple una responsabilidad clara:
 
@@ -22,9 +22,9 @@ Esta separación permite escalabilidad, trazabilidad, control de accesos y facil
 
 ---
 
-## 🔐 2. Requisitos y Credenciales (completar por el administrador)
+## 2. Requisitos y Credenciales (completar por el administrador)
 
-### 📦 2.1 Requisitos del Sistema
+### 2.1 Requisitos del Sistema
 
 - **Docker Desktop** (entorno local)
 - **Docker Engine** (entorno servidor Linux)
@@ -34,7 +34,7 @@ Esta separación permite escalabilidad, trazabilidad, control de accesos y facil
   - Gmail OAuth
 - **PDF Generator API** (HTML → PDF)
 
-### 🔑 2.2 Credenciales Necesarias
+### 2.2 Credenciales Necesarias
 
 Las credenciales deben ser solicitadas a un desarrollador/administrador del proyecto:
 
@@ -43,15 +43,14 @@ Las credenciales deben ser solicitadas a un desarrollador/administrador del proy
 - API externa de conversión PDF
 - Credenciales de acceso VPN e infraestructura universitaria
 
-> ⚠️ Para entregas académicas o repositorios públicos, los valores sensibles deben ser anonimizados.
 
 ---
 
-## ⭐ 3. Instalación y Configuración (Entorno Local)
+## 3. Instalación y Configuración (Entorno Local)
 
 Esta sección describe la configuración utilizada durante el **desarrollo y pruebas locales**.
 
-### 🐳 3.1 Instalación de Docker Desktop
+### 3.1 Instalación de Docker Desktop
 
 Descargar desde:
 
@@ -59,7 +58,7 @@ Descargar desde:
 
 ---
 
-### ▶️ 3.2 Levantar n8n en Local
+### 3.2 Levantar n8n en Local
 
 ```bash
 docker run -d \
@@ -75,7 +74,7 @@ Acceso:
 
 ---
 
-### 🌐 3.3 Configuración de Ngrok
+### 3.3 Configuración de Ngrok
 
 Ngrok se utiliza para exponer el webhook de n8n a Google Apps Script y Google Forms.
 
@@ -91,7 +90,7 @@ Se obtiene una URL del tipo:
 
 ---
 
-### ✏️ 3.4 Configuración de Apps Script
+### 3.4 Configuración de Apps Script
 
 En el archivo `Code.gs`:
 
@@ -103,7 +102,7 @@ Guardar y ejecutar el script para otorgar permisos.
 
 ---
 
-## 🗂 4. Modelo de Datos – Google Sheets
+## 4. Modelo de Datos – Google Sheets
 
 Google Sheets actúa como la **base de datos lógica del sistema**, compuesta por múltiples hojas especializadas.
 
@@ -125,7 +124,7 @@ Google Sheets actúa como la **base de datos lógica del sistema**, compuesta po
 
 ---
 
-## 🔁 5. Flujo Principal de Evaluaciones (n8n)
+## 5. Flujo Principal de Evaluaciones (n8n)
 
 El flujo fue **iterativamente ampliado** hasta llegar a su versión productiva final.
 
@@ -145,7 +144,7 @@ El flujo fue **iterativamente ampliado** hasta llegar a su versión productiva f
 
 ---
 
-## 📊 6. Flujos Complementarios
+## 6. Flujos Complementarios
 
 ### 6.1 Flujo de Dashboard
 
@@ -171,7 +170,7 @@ El flujo fue **iterativamente ampliado** hasta llegar a su versión productiva f
 
 ---
 
-## 🌍 7. Despliegue Final en Máquina Virtual Universitaria
+## 7. Despliegue Final en Máquina Virtual Universitaria
 
 Esta sección describe el **último paso del proyecto**, correspondiente al despliegue en infraestructura universitaria.
 
