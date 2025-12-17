@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Evaluación Académica</title>
+
+  <style>
+    :root {
+      --primary: #2563eb;
+      --bg: #f4f6f8;
+      --card: #ffffff;
+      --text: #111827;
+      --muted: #6b7280;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    /* HEADER */
+    header {
+      background: linear-gradient(135deg, #0f172a, #111827);
+      color: white;
+      padding: 28px 20px;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    header p {
+      margin-top: 8px;
+      color: #c7d2fe;
+      font-size: 14px;
+    }
+
+    /* CONTENEDOR */
+    main {
+      max-width: 960px;
+      margin: 30px auto;
+      padding: 0 16px;
+    }
+
+    /* BUSCADOR */
+    .controls {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .controls input {
+      flex: 1;
+      min-width: 240px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid #d1d5db;
+      font-size: 14px;
+    }
+
+    .controls button {
+      padding: 12px 18px;
+      border-radius: 10px;
+      border: none;
+      background: var(--primary);
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .controls button:hover {
+      background: #1d4ed8;
+    }
+
+    /* ESTADO */
+    .status {
+      font-size: 14px;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    /* TARJETAS */
+    .card {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 14px;
+      box-shadow: 0 10px 25px rgba(0,0,0,.08);
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .card h3 {
+      margin: 0 0 6px 0;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .meta {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .card a {
+      align-self: center;
+      background: #e0e7ff;
+      color: var(--primary);
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-weight: 600;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .card a:hover {
+      background: #c7d2fe;
+    }
+
+    /* EMPTY */
+    .empty {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 40px 20px;
+      text-align: center;
+      color: var(--muted);
+      box-shadow: 0 10px 25px rgba(0,0,0,.08);
+    }
+
+    .empty span {
+      font-size: 28px;
+      display: block;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <h1>Sistema de Evaluación Automatizada</h1>
+  <p>Responde la evaluación. El sistema analizará tus respuestas automáticamente.</p>
+</header>
+
+<main>
+
+  <!-- BUSCADOR + BOTÓN -->
+  <div class="controls">
+    <input id="q" placeholder="Buscar por nombre, categoría, ID o correo docente…" />
+    <button onclick="load()">Actualizar</button>
+  </div>
+
+  <div id="status" class="status">Cargando evaluaciones…</div>
+
+  <div id="list"></div>
+
+</main>
+
+<script>
+  const API_URL = "http://10.40.5.16:5678/webhook/forms";
+  let cache = [];
+
+  function render(data) {
+    const q = (document.getElementById("q").value || "").toLowerCase().trim();
+    const list = document.getElementById("list");
+    list.innerHTML = "";
+
+    const filtered = data.filter(x => {
+      const text = (
+        x.id_evaluacion + " " +
+        x.nombre_formulario + " " +
+        x.categoria + " " +
+        x.correo_docente
+      ).toLowerCase();
+      return !q || text.includes(q);
+    });
+
+    document.getElementById("status").textContent =
+      `Mostrando ${filtered.length} evaluación(es).`;
+
+    if (filtered.length === 0) {
+      list.innerHTML = `
+        <div class="empty">
+          <span>😴</span>
+          No hay evaluaciones activas en este momento.
+        </div>`;
+      return;
+    }
+
+    filtered.forEach(x => {
+      const div = document.createElement("div");
+      div.className = "card";
+      div.innerHTML = `
+        <div>
+          <h3>${x.nombre_formulario || x.id_evaluacion}</h3>
+          <div class="meta">
+            <b>ID:</b> ${x.id_evaluacion}<br>
+            <b>Categoría:</b> ${x.categoria} · 
+            <b>Preguntas:</b> ${x.total_preguntas}<br>
+            <b>Docente:</b> ${x.correo_docente}<br>
+            <b>Creada:</b> ${x.fecha_creada}
+          </div>
+        </div>
+        <a href="${x.form_url}" target="_blank">Abrir evaluación</a>
+      `;
+      list.appendChild(div);
+    });
+  }
+
+  async function load() {
+    document.getElementById("status").textContent = "Cargando evaluaciones…";
+    try {
+      const res = await fetch(API_URL, { cache: "no-store" });
+      const data = await res.json();
+      cache = data;
+      render(cache);
+    } catch (e) {
+      document.getElementById("status").textContent =
+        "Error cargando evaluaciones. Verifique conexión VPN.";
+    }
+  }
+
+  document.getElementById("q").addEventListener("input", () => render(cache));
+  load();
+</script>
+
+</body>
+</html>
+

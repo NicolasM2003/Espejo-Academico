@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Portal de Evaluaciones Académicas</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    body { background-color: #f4f6f8; }
+  </style>
+</head>
+
+<body class="min-h-screen">
+
+<!-- ================= HEADER ================= -->
+<header class="bg-white shadow-sm">
+  <div class="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
+    <h1 class="text-xl font-bold text-blue-600">
+      🎓 Espejo Académico
+    </h1>
+
+    <button onclick="mostrar('landing')"
+      class="text-sm bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg">
+      ⬅ Inicio
+    </button>
+  </div>
+</header>
+
+<!-- ================= CONTENEDOR ================= -->
+<main class="flex justify-center px-4 py-10">
+<div class="w-full max-w-4xl bg-white shadow-xl rounded-xl p-8">
+
+<!-- ================= LANDING ================= -->
+<section id="landing" class="space-y-8 text-center">
+  <h2 class="text-3xl font-bold text-blue-600">
+    Portal de Evaluaciones Académicas
+  </h2>
+
+  <p class="text-gray-600">
+    Selecciona tu rol para continuar
+  </p>
+
+  <div class="flex flex-col md:flex-row gap-6 justify-center">
+    <button onclick="irProfesor()"
+      class="bg-blue-600 hover:bg-blue-700 text-white text-xl px-10 py-6 rounded-xl">
+      👨🏫 Profesor
+    </button>
+
+    <button onclick="alert('Ingresa mediante el link del examen')"
+      class="bg-green-600 hover:bg-green-700 text-white text-xl px-10 py-6 rounded-xl">
+      🎓 Estudiante
+    </button>
+  </div>
+</section>
+
+<!-- ================= PROFESOR ================= -->
+<section id="profesor" class="hidden space-y-6">
+
+  <h2 class="text-2xl font-bold text-blue-600">
+    Panel del Profesor
+  </h2>
+
+  <!-- LOGIN -->
+  <div id="loginProfesor" class="bg-gray-50 p-6 rounded-xl space-y-4">
+    <input id="passwordProfesor" type="password"
+      placeholder="Contraseña"
+      class="w-full border rounded-lg p-3" />
+
+    <button onclick="loginProfesor()"
+      class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg">
+      Ingresar
+    </button>
+  </div>
+
+  <!-- CONTENIDO -->
+  <div id="contenidoProfesor" class="hidden">
+
+    <!-- TABS -->
+    <div class="flex gap-2 mb-6">
+      <button onclick="tabProfesor('crear')"
+        id="tabCrear"
+        class="tab bg-blue-600 text-white px-4 py-2 rounded-lg">
+        Crear Examen
+      </button>
+
+      <button onclick="tabProfesor('resultado')"
+        id="tabResultado"
+        class="tab bg-gray-200 px-4 py-2 rounded-lg">
+        Resultado
+      </button>
+    </div>
+
+    <!-- TAB CREAR -->
+    <div id="tab-crear" class="space-y-6">
+
+      <div>
+        <label class="font-semibold">Nombre del Examen</label>
+        <input id="nombreExamen" type="text"
+... (195 líneas restantes)
+Contraer
+message.txt
+9 KB
+﻿
+joaco
+xdjoaquin
+ 
+ 
+ 
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Portal de Evaluaciones Académicas</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    body { background-color: #f4f6f8; }
+  </style>
+</head>
+
+<body class="min-h-screen">
+
+<!-- ================= HEADER ================= -->
+<header class="bg-white shadow-sm">
+  <div class="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
+    <h1 class="text-xl font-bold text-blue-600">
+      🎓 Espejo Académico
+    </h1>
+
+    <button onclick="mostrar('landing')"
+      class="text-sm bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg">
+      ⬅ Inicio
+    </button>
+  </div>
+</header>
+
+<!-- ================= CONTENEDOR ================= -->
+<main class="flex justify-center px-4 py-10">
+<div class="w-full max-w-4xl bg-white shadow-xl rounded-xl p-8">
+
+<!-- ================= LANDING ================= -->
+<section id="landing" class="space-y-8 text-center">
+  <h2 class="text-3xl font-bold text-blue-600">
+    Portal de Evaluaciones Académicas
+  </h2>
+
+  <p class="text-gray-600">
+    Selecciona tu rol para continuar
+  </p>
+
+  <div class="flex flex-col md:flex-row gap-6 justify-center">
+    <button onclick="irProfesor()"
+      class="bg-blue-600 hover:bg-blue-700 text-white text-xl px-10 py-6 rounded-xl">
+      👨‍🏫 Profesor
+    </button>
+
+    <button onclick="alert('Ingresa mediante el link del examen')"
+      class="bg-green-600 hover:bg-green-700 text-white text-xl px-10 py-6 rounded-xl">
+      🎓 Estudiante
+    </button>
+  </div>
+</section>
+
+<!-- ================= PROFESOR ================= -->
+<section id="profesor" class="hidden space-y-6">
+
+  <h2 class="text-2xl font-bold text-blue-600">
+    Panel del Profesor
+  </h2>
+
+  <!-- LOGIN -->
+  <div id="loginProfesor" class="bg-gray-50 p-6 rounded-xl space-y-4">
+    <input id="passwordProfesor" type="password"
+      placeholder="Contraseña"
+      class="w-full border rounded-lg p-3" />
+
+    <button onclick="loginProfesor()"
+      class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg">
+      Ingresar
+    </button>
+  </div>
+
+  <!-- CONTENIDO -->
+  <div id="contenidoProfesor" class="hidden">
+
+    <!-- TABS -->
+    <div class="flex gap-2 mb-6">
+      <button onclick="tabProfesor('crear')"
+        id="tabCrear"
+        class="tab bg-blue-600 text-white px-4 py-2 rounded-lg">
+        Crear Examen
+      </button>
+
+      <button onclick="tabProfesor('resultado')"
+        id="tabResultado"
+        class="tab bg-gray-200 px-4 py-2 rounded-lg">
+        Resultado
+      </button>
+    </div>
+
+    <!-- TAB CREAR -->
+    <div id="tab-crear" class="space-y-6">
+
+      <div>
+        <label class="font-semibold">Nombre del Examen</label>
+        <input id="nombreExamen" type="text"
+          class="w-full border rounded-lg p-3 mt-1"
+          placeholder="Ej: Solemne 1" />
+      </div>
+
+      <div>
+        <h3 class="font-semibold mb-2">Banco de Preguntas</h3>
+        <div id="listaPreguntas"
+          class="border rounded-lg p-4 space-y-2 max-h-64 overflow-y-auto">
+        </div>
+      </div>
+
+      <button onclick="generarExamen()"
+        class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg">
+        Generar Examen
+      </button>
+    </div>
+
+    <!-- TAB RESULTADO -->
+    <div id="tab-resultado" class="hidden">
+      <div id="resultadoLink"
+        class="bg-gray-100 p-6 rounded-xl space-y-2">
+        <p class="font-semibold">Link generado:</p>
+        <a id="linkExamen" class="text-blue-600 underline" target="_blank"></a>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ================= ALUMNO ================= -->
+<section id="alumno" class="hidden space-y-6">
+
+  <h2 class="text-2xl font-bold text-green-600">
+    Evaluación
+  </h2>
+
+  <div class="grid md:grid-cols-2 gap-4">
+    <input id="nombreAlumno" placeholder="Nombre completo"
+      class="border p-3 rounded-lg" />
+    <input id="emailAlumno" placeholder="Correo"
+      class="border p-3 rounded-lg" />
+  </div>
+
+  <div id="preguntasExamen" class="space-y-6"></div>
+
+  <button onclick="enviarEvaluacion()"
+    class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg">
+    Enviar Evaluación
+  </button>
+</section>
+
+</div>
+</main>
+
+<script>
+/*************** CONFIG N8N *****************/
+const DOMINIO_BASE = 'https://hemihedrally-vagotropic-devora.ngrok-free.dev';
+const HOOK_TRAER_PREGUNTAS = DOMINIO_BASE + '/webhook/traer-preguntas';
+const HOOK_CREAR_CONFIG = DOMINIO_BASE + '/webhook/crear-config';
+const HOOK_CARGAR_EXAMEN = DOMINIO_BASE + '/webhook/cargar-examen';
+const HOOK_RECEPCION_RESPUESTAS = DOMINIO_BASE + '/webhook/recibir-respuestas';
+
+/*************** UTIL *****************/
+const qs = new URLSearchParams(window.location.search);
+const idExamenURL = qs.get('id_examen');
+
+function mostrar(id) {
+  document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+}
+
+function tabProfesor(tab) {
+  document.getElementById('tab-crear').classList.add('hidden');
+  document.getElementById('tab-resultado').classList.add('hidden');
+
+  document.getElementById('tabCrear').className = 'tab bg-gray-200 px-4 py-2 rounded-lg';
+  document.getElementById('tabResultado').className = 'tab bg-gray-200 px-4 py-2 rounded-lg';
+
+  document.getElementById(`tab-${tab}`).classList.remove('hidden');
+  document.getElementById(`tab${tab.charAt(0).toUpperCase()+tab.slice(1)}`)
+    .className = 'tab bg-blue-600 text-white px-4 py-2 rounded-lg';
+}
+
+/*************** INIT *****************/
+if (idExamenURL) {
+  mostrar('alumno');
+  cargarExamenAlumno(idExamenURL);
+} else {
+  mostrar('landing');
+}
+
+/*************** PROFESOR *****************/
+function irProfesor() {
+  mostrar('profesor');
+}
+
+async function loginProfesor() {
+  const pass = document.getElementById('passwordProfesor').value;
+
+  if (pass !== 'admin123') {
+    alert('Contraseña incorrecta');
+    return;
+  }
+
+  document.getElementById('loginProfesor').classList.add('hidden');
+  document.getElementById('contenidoProfesor').classList.remove('hidden');
+
+  cargarPreguntas();
+}
+
+async function cargarPreguntas() {
+  const res = await fetch(HOOK_TRAER_PREGUNTAS);
+  const data = await res.json();
+
+  listaPreguntas.innerHTML = data.map(p => `
+    <label class="flex gap-2 items-center">
+      <input type="checkbox" value="${p.id}">
+      ${p.texto}
+    </label>
+  `).join('');
+}
+
+async function generarExamen() {
+  const nombre = nombreExamen.value.trim();
+  const ids = [...listaPreguntas.querySelectorAll('input:checked')].map(i => i.value);
+
+  if (!nombre || ids.length === 0) {
+    alert('Debe ingresar nombre y seleccionar preguntas');
+    return;
+  }
+
+  const res = await fetch(HOOK_CREAR_CONFIG, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      nombre_examen: nombre,
+      preguntas_ids: ids
+    })
+  });
+
+  const data = await res.json();
+
+  const link = `${location.origin}${location.pathname}?id_examen=${data.id_examen}`;
+  linkExamen.textContent = link;
+  linkExamen.href = link;
+
+  tabProfesor('resultado');
+}
+
+/*************** ALUMNO *****************/
+async function cargarExamenAlumno(id) {
+  const res = await fetch(`${HOOK_CARGAR_EXAMEN}?id_examen=${id}`);
+  const data = await res.json();
+
+  preguntasExamen.innerHTML = data.preguntas.map((p,i)=>`
+    <div class="border p-4 rounded-lg">
+      <p class="font-semibold">${i+1}. ${p.texto}</p>
+      ${p.opciones.map(op=>`
+        <label class="block">
+          <input type="radio" name="preg_${i}" value="${op}"> ${op}
+        </label>
+      `).join('')}
+    </div>
+  `).join('');
+}
+
+async function enviarEvaluacion() {
+  const respuestas = [];
+
+  document.querySelectorAll('#preguntasExamen > div').forEach(div=>{
+    const pregunta = div.querySelector('p').innerText;
+    const respuesta = div.querySelector('input:checked')?.value;
+    if (respuesta) respuestas.push({ pregunta, respuesta });
+  });
+
+  await fetch(HOOK_RECEPCION_RESPUESTAS, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      id_evaluacion: idExamenURL,
+      estudiante:{
+        nombre: nombreAlumno.value,
+        email: emailAlumno.value
+      },
+      respuestas
+    })
+  });
+
+  alert('Evaluación enviada correctamente');
+}
+</script>
+
+</body>
+</html>
